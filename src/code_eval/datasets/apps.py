@@ -12,12 +12,7 @@ class APPSDataset(BaseDataset):
         dataset = load_dataset("codeparrot/apps")
 
 
-    def explore(self):
-        print(self.dataset)
-        print(self.dataset["test"][0])
-
 
 if __name__ == "__main__":
     apps = APPSDataset()
     apps.load()
-    apps.explore()
