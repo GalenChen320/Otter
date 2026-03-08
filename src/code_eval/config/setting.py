@@ -32,6 +32,7 @@ class ExecutorSettings(BaseSettings):
 
 
 class DatasetSettings(BaseSettings):
+    model_config = make_settings_config(env_prefix="DATASET__")
     cache_dir: Path = ROOT_DIR / "data" / "cache"
     dataset_name: Literal[
         "humaneval",
@@ -50,6 +51,7 @@ class Settings(BaseSettings):
     dataset: DatasetSettings = DatasetSettings()
     llm: LLMSettings = LLMSettings()
     log: LoggerSettings = LoggerSettings()
+    executor: ExecutorSettings = ExecutorSettings()
 
 
 settings = Settings()
