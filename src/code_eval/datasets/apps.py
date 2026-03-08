@@ -1,9 +1,10 @@
 from datasets import load_dataset
 
+from code_eval.datasets.base import BaseDataset
 from code_eval.config.setting import settings, ROOT_DIR
 
 
-class APPSDataset:
+class APPSDataset(BaseDataset):
 
 
     def load(self):
