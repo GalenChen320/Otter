@@ -15,7 +15,7 @@ class OpenAICompatibleLLM(BaseLLM):
             base_url=settings.llm.base_url,
         )
 
-    async def generate(self, prompt: str) -> str:
+    async def _generate(self, prompt: str) -> str:
         response = await self.client.chat.completions.create(
             model=settings.llm.model,
             messages=[{"role": "user", "content": prompt}],

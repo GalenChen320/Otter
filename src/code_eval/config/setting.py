@@ -21,6 +21,8 @@ class LLMSettings(BaseSettings):
     model: str
     concurrency: int = 10
     samples_per_problem: int = 1
+    max_retries: int = 3
+    retry_base_delay: float = 1.0
 
 
 class ExecutorSettings(BaseSettings):
@@ -36,12 +38,18 @@ class DatasetSettings(BaseSettings):
         "apps",
         "mbppplus"
     ] = "mbppplus"
-    
+
+
+class LoggerSettings(BaseSettings):
+    model_config = make_settings_config(env_prefix="LOG__")
+    level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    log_file: Path | None = None
 
 
 class Settings(BaseSettings):
     dataset: DatasetSettings = DatasetSettings()
     llm: LLMSettings = LLMSettings()
+    log: LoggerSettings = LoggerSettings()
 
 
 settings = Settings()
