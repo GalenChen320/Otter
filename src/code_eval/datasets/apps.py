@@ -16,7 +16,7 @@ class APPSDataset:
         print(self.dataset["test"][0])
 
 
-
-h = APPSDataset()
-h.load()
-h.explore()
+if __name__ == "__main__":
+    apps = APPSDataset()
+    apps.load()
+    apps.explore()

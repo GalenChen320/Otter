@@ -32,18 +32,15 @@ class ExecutorSettings(BaseSettings):
 class DatasetSettings(BaseSettings):
     cache_dir: Path = ROOT_DIR / "data" / "cache"
     dataset_name: Literal[
-        "openai_humaneval",
-        "codeparrot/apps"
-    ] = "codeparrot/apps"
-
-
-class ModelSettings(BaseSettings):
-    pass
+        "humaneval",
+        "apps",
+        "mbppplus"
+    ] = "mbppplus"
 
 
 class Settings(BaseSettings):
     dataset: DatasetSettings = DatasetSettings()
-    model: ModelSettings = ModelSettings()
+    llm: LLMSettings = LLMSettings()
 
 
 settings = Settings()
