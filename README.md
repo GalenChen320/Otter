@@ -12,16 +12,16 @@ CodeEval/
 ├── data/cache/                     # HuggingFace 数据集本地缓存
 └── src/code_eval/
     ├── __init__.py
-    ├── pipline.py                  # 主流程编排（入口）
+    ├── pipeline.py                 # 主流程编排（入口）
     ├── config/
     │   ├── __init__.py
     │   └── setting.py              # pydantic-settings 配置管理
     ├── datasets/
-    │   ├── __init__.py             # 导出 BaseDataset, MBPPPlusDataset
+    │   ├── __init__.py             # 导出 BaseDataset, APPSDataset, HumanEvalDataset, MBPPPlusDataset
     │   ├── base.py                 # BaseDataset 抽象基类
     │   ├── mbppplus.py             # MBPP+ 数据集实现（完整）
-    │   ├── humaneval.py            # HumanEval 数据集（探索性代码，未完成）
-    │   └── hf_apps.py             # APPS 数据集（探索性代码，未完成）
+    │   ├── humaneval.py            # HumanEval 数据集（未完成，未继承 BaseDataset）
+    │   └── apps.py                 # APPS 数据集（未完成，未继承 BaseDataset）
     └── llm/
         ├── __init__.py             # 导出 BaseLLM, OpenAICompatibleLLM
         ├── base.py                 # BaseLLM 抽象基类
@@ -32,28 +32,27 @@ CodeEval/
 
 ### 已实现
 
-- **配置管理** (`config/setting.py`)：使用 `pydantic-settings` 从 `.env` 文件加载配置，支持 `LLM__` 前缀的环境变量（API 密钥、base_url、模型名、并发数等）。
+- **配置管理** (`config/setting.py`)：使用 `pydantic-settings` 从 `.env` 文件加载配置。`Settings` 包含 `DatasetSettings`（数据集名称、缓存路径）和 `LLMSettings`（`LLM__` 前缀环境变量：API 密钥、base_url、模型名、并发数、每题采样数）。另有 `ExecutorSettings`（Docker 并发数、超时）已定义但尚未接入。
 - **数据集抽象** (`datasets/base.py`)：定义 `BaseDataset` 抽象基类，规范 `load`、`__len__`、`__getitem__`、`make_prompt` 四个接口。
-- **MBPP+ 数据集** (`datasets/mbppplus.py`)：完整实现了 `evalplus/mbppplus` 数据集的加载与 prompt 构造，将每道题解析为 `MBPPPlusProblem` dataclass。
+- **MBPP+ 数据集** (`datasets/mbppplus.py`)：完整实现了 `evalplus/mbppplus` 数据集的加载与 prompt 构造，将每道题解析为 `MBPPPlusProblem` dataclass。是目前唯一完整实现 `BaseDataset` 的数据集。
 - **LLM 抽象** (`llm/base.py`)：定义 `BaseLLM` 抽象基类，规范异步 `generate` 接口。
 - **OpenAI 兼容 LLM** (`llm/openai_compatible.py`)：通过 `AsyncOpenAI` 客户端调用任意兼容 OpenAI 接口的服务（OpenAI / DeepSeek / vLLM / Ollama 等）。
-- **主流程** (`pipline.py`)：异步并发生成代码解答，支持断点续跑（检查已有 JSONL 结果跳过已完成任务），通过 Semaphore 控制并发。
+- **主流程** (`pipeline.py`)：`create_dataset()` 根据配置名（`humaneval` / `apps` / `mbppplus`）创建数据集实例；`create_llm()` 创建 LLM 客户端；`run()` 异步并发生成代码解答，支持断点续跑（检查已有 JSONL 结果跳过已完成任务），通过 Semaphore 控制并发。
 
 ### 未实现
 
 - **代码执行与评测**：`ExecutorSettings` 已定义（Docker 并发数、超时时间），但执行器本身尚未实现。生成的代码无法自动运行和判定正确性。
-- **HumanEval 数据集**：`humaneval.py` 仅为探索性代码，未继承 `BaseDataset`，且在模块级别直接执行（导入即运行）。
-- **APPS 数据集**：`hf_apps.py` 同样为探索性代码，未继承 `BaseDataset`，且在模块级别直接执行。`APPSDataset.load()` 中引用了不存在的 `settings.dataset.apps`。
+- **HumanEval 数据集**：`humaneval.py` 有 `load` 方法但未继承 `BaseDataset`，缺少 `__len__`、`__getitem__`、`make_prompt` 实现。
+- **APPS 数据集**：`apps.py` 未继承 `BaseDataset`，`load()` 中引用了不存在的 `settings.dataset.apps`，缺少完整的数据集接口实现。
 - **结果分析与统计**：无 pass@k 等指标计算功能。
 
 ## 已知问题
 
-1. **`Settings` 类缺少属性**：`pipline.py` 中引用了 `settings.llm` 和 `settings.result`，但 `Settings` 类中未定义 `llm: LLMSettings` 和 `result` 相关字段，运行时会报 `AttributeError`。
-2. **`DatasetSettings.dataset_name` 枚举不匹配**：`Literal` 类型限定为 `"openai_humaneval"` 和 `"codeparrot/apps"`，但 `pipline.py` 的 `create_dataset()` 只处理了 `"evalplus/mbppplus"`，两者没有交集。
-3. **`create_llm()` 引用不存在的字段**：`settings.llm.llm_type` 在 `LLMSettings` 中未定义。
-4. **文件名拼写错误**：`pipline.py` 应为 `pipeline.py`。
-5. **模块级副作用**：`humaneval.py` 和 `hf_apps.py` 在模块顶层直接实例化并调用方法，导入时会立即执行网络请求等操作。
-6. **`.env.example` 为空**：未提供环境变量配置示例，不利于其他开发者上手。
+1. **`Settings` 缺少 `result` 属性**：`pipeline.py` 的 `main()` 中引用了 `settings.result.result_dir`，但 `Settings` 类中未定义该字段，运行时会报 `AttributeError`。
+2. **`create_llm()` 引用不存在的字段**：`settings.llm.llm_type` 在 `LLMSettings` 中未定义。
+3. **`HumanEvalDataset` / `APPSDataset` 未继承 `BaseDataset`**：已在 `datasets/__init__.py` 中导出并在 `pipeline.py` 的 `create_dataset()` 中注册，但实际不满足 `BaseDataset` 接口，运行时会出错。
+4. **`APPSDataset.load()` 引用不存在的配置**：`settings.dataset.apps` 在 `DatasetSettings` 中未定义。
+5. **`.env.example` 为空**：未提供环境变量配置示例，不利于其他开发者上手。
 
 ## 依赖
 
