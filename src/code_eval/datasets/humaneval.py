@@ -12,11 +12,7 @@ class HumanEvalDataset(BaseDataset):
             cache_dir=str(settings.dataset.cache_dir)
         )
 
-    def explore(self):
-        print(self.dataset)
-        print(self.dataset["test"][0])
 
 
 if __name__ == "__main__":
     h = HumanEvalDataset()
-    h.explore()
