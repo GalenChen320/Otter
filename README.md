@@ -13,6 +13,7 @@ CodeEval/
 └── src/code_eval/
     ├── __init__.py
     ├── pipeline.py                 # 主流程编排（入口）
+    ├── logger.py                   # 全局单例 logger
     ├── config/
     │   ├── __init__.py
     │   └── setting.py              # pydantic-settings 配置管理
@@ -24,7 +25,7 @@ CodeEval/
     │   └── apps.py                 # APPS 数据集（未完成，未继承 BaseDataset）
     └── llm/
         ├── __init__.py             # 导出 BaseLLM, OpenAICompatibleLLM
-        ├── base.py                 # BaseLLM 抽象基类
+        ├── base.py                 # BaseLLM 抽象基类（模板方法模式，内置重试与指数退避）
         └── openai_compatible.py    # OpenAI 兼容接口 LLM 实现
 ```
 
@@ -32,10 +33,15 @@ CodeEval/
 
 ### 已实现
 
-- **配置管理** (`config/setting.py`)：使用 `pydantic-settings` 从 `.env` 文件加载配置。`Settings` 包含 `DatasetSettings`（数据集名称、缓存路径）和 `LLMSettings`（`LLM__` 前缀环境变量：API 密钥、base_url、模型名、并发数、每题采样数）。另有 `ExecutorSettings`（Docker 并发数、超时）已定义但尚未接入。
+- **配置管理** (`config/setting.py`)：使用 `pydantic-settings` 从 `.env` 文件加载配置。`Settings` 包含：
+  - `DatasetSettings` — 数据集名称、缓存路径
+  - `LLMSettings`（`LLM__` 前缀）— API 密钥、base_url、模型名、并发数、每题采样数、重试次数、重试退避基础延迟
+  - `LoggerSettings`（`LOG__` 前缀）— 日志级别、可选日志文件路径
+  - `ExecutorSettings`（`EXECUTOR__` 前缀）— Docker 并发数、超时（已定义，尚未接入）
+- **全局日志** (`logger.py`)：基于 `LoggerSettings` 构建的全局单例 logger，输出到 stderr，可选同时写入文件。使用方式：`from code_eval.logger import logger`。
 - **数据集抽象** (`datasets/base.py`)：定义 `BaseDataset` 抽象基类，规范 `load`、`__len__`、`__getitem__`、`make_prompt` 四个接口。
 - **MBPP+ 数据集** (`datasets/mbppplus.py`)：完整实现了 `evalplus/mbppplus` 数据集的加载与 prompt 构造，将每道题解析为 `MBPPPlusProblem` dataclass。是目前唯一完整实现 `BaseDataset` 的数据集。
-- **LLM 抽象** (`llm/base.py`)：定义 `BaseLLM` 抽象基类，规范异步 `generate` 接口。
+- **LLM 抽象** (`llm/base.py`)：`BaseLLM` 采用模板方法模式，`generate` 为具体方法，内置重试与指数退避（参数从 `settings.llm` 读取），子类只需实现 `_generate`。
 - **OpenAI 兼容 LLM** (`llm/openai_compatible.py`)：通过 `AsyncOpenAI` 客户端调用任意兼容 OpenAI 接口的服务（OpenAI / DeepSeek / vLLM / Ollama 等）。
 - **主流程** (`pipeline.py`)：`create_dataset()` 根据配置名（`humaneval` / `apps` / `mbppplus`）创建数据集实例；`create_llm()` 创建 LLM 客户端；`run()` 异步并发生成代码解答，支持断点续跑（检查已有 JSONL 结果跳过已完成任务），通过 Semaphore 控制并发。
 
