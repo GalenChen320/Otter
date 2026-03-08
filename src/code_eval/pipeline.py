@@ -9,8 +9,9 @@ from code_eval.config.setting import settings
 
 def create_dataset() -> datasets.BaseDataset:
     match settings.dataset.dataset_name:
-        case "evalplus/mbppplus":
-            return datasets.MBPPPlusDataset()
+        case "humaneval": return datasets.HumanEvalDataset()
+        case "apps": return datasets.APPSDataset()
+        case "mbppplus": return datasets.MBPPPlusDataset()
         case _:
             raise ValueError(f"unknown dataset: {settings.dataset.dataset_name}")
 
