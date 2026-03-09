@@ -24,7 +24,7 @@ class Turn:
 
 @dataclass
 class Episode:
-    task_id: str
+    eid: str
     max_turns: int
     turns: list[Turn] = field(default_factory=list)
 

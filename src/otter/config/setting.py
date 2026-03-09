@@ -66,12 +66,16 @@ class ExperimentSettings(BaseSettings):
         env_prefix="EXPERIMENT__", 
         extra="ignore"
     )
+    experiment_id: str = "default"
     max_turns: int = 1
     feedback_strategy: Literal[
         "minimal",
         "error_message",
         "progressive"
     ] = "error_message"
+    @property
+    def output_dir(self) -> Path:
+        return ROOT_DIR / "experiments" / self.experiment_id
 
 
 class Settings(BaseSettings):

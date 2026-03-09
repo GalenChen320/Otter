@@ -3,6 +3,8 @@ import asyncio
 from otter import dataset
 from otter import llm
 from otter.config.setting import get_settings
+from otter.episode import Episode
+from otter.store import BaseStore
 
 
 def create_dataset() -> dataset.BaseDataset:
@@ -24,40 +26,66 @@ def create_llm() -> llm.BaseLLM:
             raise ValueError(f"unknown response_format: {settings.llm.response_format}")
 
 
-async def run(dataset: dataset.BaseDataset, llm_client: llm.BaseLLM) -> list[dict]:
+def create_store() -> BaseStore:
+    # TODO: 根据 settings 创建具体的 Store 实现
+    raise NotImplementedError
+
+
+def build_episodes(ds: dataset.BaseDataset, store: BaseStore) -> list[Episode]:
+    """构建待处理的 Episode 列表。
+
+    将每道题展开 samples_per_problem 份，每份是独立的 Episode。
+    eid 格式："{原始task_id}#{sample序号}"。
+    已完成的（resolved 或 exhausted）跳过，部分完成的继续。
+    """
     settings = get_settings()
-    results: list[dict] = []
+    existing = store.load_episodes()
+    episodes: list[Episode] = []
+
+    for i in range(len(ds)):
+        problem = ds[i]
+        for k in range(settings.llm.samples_per_problem):
+            eid = f"{problem.task_id}#{k}"
+            if eid in existing:
+                ep = existing[eid]
+                if ep.resolved or ep.exhausted:
+                    continue
+                episodes.append(ep)
+            else:
+                episodes.append(Episode(
+                    eid=eid,
+                    max_turns=settings.experiment.max_turns,
+                ))
+
+    return episodes
+
+
+async def run(
+    ds: dataset.BaseDataset,
+    llm_client: llm.BaseLLM,
+    store: BaseStore,
+) -> list[Episode]:
+    settings = get_settings()
     gen_semaphore = asyncio.Semaphore(settings.llm.concurrency)
+    episodes = build_episodes(ds, store)
 
-    async def process(index: int, sample_idx: int):
-        problem = dataset[index]
-
+    async def process(ep: Episode):
         async with gen_semaphore:
-            prompt = dataset.make_prompt(index)
-            solution = await llm_client.generate(prompt, task_id=f"{problem.task_id}#{sample_idx}")
+            # TODO: 多轮循环（生成 → 执行 → feedback），每完成一个 Turn 调用 store.save_turn()
+            pass
 
-        results.append({
-            "task_id": problem.task_id,
-            "sample_idx": sample_idx,
-            "solution": solution,
-        })
-
-    tasks = [
-        process(i, k)
-        for i in range(len(dataset))
-        for k in range(settings.llm.samples_per_problem)
-    ]
-    await asyncio.gather(*tasks)
-    return results
+    await asyncio.gather(*[process(ep) for ep in episodes])
+    return episodes
 
 
 async def main():
-    dataset = create_dataset()
-    dataset.load()
+    ds = create_dataset()
+    ds.load()
 
     llm_client = create_llm()
     if not await llm_client.ping():
         raise SystemExit("LLM ping failed, check your config")
 
-    results = await run(dataset, llm_client)
-    print(f"generated {len(results)} solutions")
+    store = create_store()
+    episodes = await run(ds, llm_client, store)
+    print(f"processed {len(episodes)} episodes")
