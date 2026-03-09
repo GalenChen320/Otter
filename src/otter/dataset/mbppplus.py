@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datasets import load_dataset
 
-from otter.datasets.base import BaseDataset
+from otter.dataset.base import BaseDataset
 from otter.config.setting import get_settings
 
 
