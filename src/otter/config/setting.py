@@ -79,11 +79,11 @@ class ExperimentSettings(BaseSettings):
 
 
 class Settings(BaseSettings):
-    dataset: DatasetSettings = DatasetSettings()
-    llm: LLMSettings = LLMSettings()
-    log: LoggerSettings = LoggerSettings()
-    executor: ExecutorSettings = ExecutorSettings()
-    experiment: ExperimentSettings = ExperimentSettings()
+    dataset: DatasetSettings
+    llm: LLMSettings
+    log: LoggerSettings
+    executor: ExecutorSettings
+    experiment: ExperimentSettings
 
 
 _settings: Settings | None = None
@@ -92,7 +92,7 @@ _settings: Settings | None = None
 def get_settings() -> Settings:
     global _settings
     if _settings is None:
-        _settings = _build_settings()
+        raise RuntimeError("Settings not initialized. Call init_settings() first.")
     return _settings
 
 
@@ -103,7 +103,7 @@ def init_settings() -> Settings:
 
 
 def _build_settings() -> Settings:
-    env = _env_file
+    env = (ROOT_DIR / _env_file).resolve()
     return Settings(
         dataset=DatasetSettings(_env_file=env),
         llm=LLMSettings(_env_file=env),
