@@ -5,7 +5,7 @@
             "name": "otter run",
             "type": "debugpy",
             "request": "launch",
-            "module": "otter.cli",
+            "program": "${workspaceFolder}/src/otter/cli.py",
             "args": ["run", "--env", ".env.local"],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
