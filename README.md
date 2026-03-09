@@ -1,8 +1,24 @@
 # Otter
 
-<p align="center">
-  <img src="assets/otter.jpg" alt="Otter" width="300">
-</p>
+<div style="display: flex; align-items: center; gap: 20px;">
+  
+  <!-- 左边图片 30% -->
+  <div style="flex: 0 0 20%;">
+    <img src="assets/otter.jpg" alt="图片" style="width: 100%; border-radius: 8px;">
+  </div>
+
+  <!-- 右边文字 -->
+  <div style="flex: 1;">
+    <h1 style="text-align: left; margin: 0 0 8px 0; font-size: 2.5em;">
+      Otter
+    </h1>
+    <p style="margin: 0; font-size: 0.9em; color: #666;">
+      这里是副标题小字，简短描述一下内容
+    </p>
+  </div>
+
+</div>
+
 
 原生支持多轮对话反馈的 LLM 代码能力评测框架。
 
