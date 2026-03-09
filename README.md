@@ -1,4 +1,4 @@
-<table border="0">
+<table table border="0" cellspacing="0" cellpadding="0">
   <tr>
     <td width="20%" align="center">
       <img src="assets/otter.jpg" width="100%" alt="logo">
