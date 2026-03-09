@@ -60,7 +60,10 @@ def build_episodes(ds: dataset.BaseDataset, store: BaseStore) -> list[Episode]:
                     continue
                 episodes.append(ep)
             else:
-                episodes.append(Episode(eid=eid))
+                episodes.append(Episode(
+                    task_id=problem.task_id,
+                    sample_id=k,
+                ))
 
     return episodes
 

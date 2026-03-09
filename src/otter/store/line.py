@@ -26,13 +26,15 @@ class LineStore(BaseStore):
         episodes: dict[str, Episode] = {}
         for path in self._dir.glob("*.jsonl"):
             eid = path.stem
+            task_id, sample_id = eid.rsplit("#", 1)
             turns = []
             for line in path.read_text(encoding="utf-8").splitlines():
                 if not line.strip():
                     continue
                 turns.append(Turn.from_dict(json.loads(line)))
             episodes[eid] = Episode(
-                eid=eid,
+                task_id=task_id,
+                sample_id=int(sample_id),
                 turns=turns,
             )
         return episodes
