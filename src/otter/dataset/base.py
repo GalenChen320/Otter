@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from otter.episode import Episode
+
 
 class BaseDataset(ABC):
 
@@ -13,6 +15,6 @@ class BaseDataset(ABC):
         pass
 
     @abstractmethod
-    def make_prompt(self, task_id: str) -> str:
+    def make_messages(self, episode: Episode) -> list[dict]:
         pass
 
