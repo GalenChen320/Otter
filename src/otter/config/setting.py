@@ -19,6 +19,9 @@ class LLMSettings(BaseSettings):
     api_key: str
     base_url: str
     model: str
+    response_format: Literal[
+        "openai_compatible"
+    ] = "openai_compatible"
     concurrency: int = 10
     samples_per_problem: int = 1
     max_retries: int = 3

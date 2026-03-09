@@ -8,7 +8,7 @@ class HumanEvalDataset(BaseDataset):
 
     def load(self):
         dataset = load_dataset(
-            settings.dataset.dataset_name,
+            "openai/openai_humaneval",
             cache_dir=str(settings.dataset.cache_dir)
         )
 

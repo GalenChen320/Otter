@@ -1,6 +1,6 @@
 .env
 *.egg-info/ 
 data/
-__pycache/
+__pycache__/
 /*.md
 !/README.md
