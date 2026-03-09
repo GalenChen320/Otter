@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "otter run",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "otter.cli",
+            "args": ["run", "--env", ".env.local"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        }
+    ]
+}

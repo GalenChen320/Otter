@@ -20,3 +20,7 @@ def run(
     init_settings()
     init_logger()
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    app()
