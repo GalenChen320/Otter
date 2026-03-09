@@ -21,6 +21,7 @@ def run(
     init_logger()
     asyncio.run(main())
 
+
 @app.command()
 def version():
     """查看版本"""

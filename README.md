@@ -36,7 +36,7 @@ Otter/
     ├── config/
     │   ├── __init__.py
     │   └── setting.py              # pydantic-settings 配置管理（延迟初始化）
-    ├── datasets/
+    ├── dataset/
     │   ├── __init__.py
     │   ├── base.py                 # BaseDataset 抽象基类
     │   ├── mbppplus.py             # MBPP+ 数据集（完整实现）
