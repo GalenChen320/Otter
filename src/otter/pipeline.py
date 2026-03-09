@@ -50,20 +50,16 @@ def build_episodes(ds: dataset.BaseDataset, store: BaseStore) -> list[Episode]:
     existing = store.load_episodes()
     episodes: list[Episode] = []
 
-    for i in range(len(ds)):
-        problem = ds[i]
+    for task_id in ds.task_ids:
         for k in range(settings.llm.samples_per_problem):
-            eid = f"{problem.task_id}#{k}"
+            eid = Episode.make_eid(task_id, k)
             if eid in existing:
                 ep = existing[eid]
                 if ep.resolved or ep.exhausted(settings.experiment.max_turns):
                     continue
                 episodes.append(ep)
             else:
-                episodes.append(Episode(
-                    task_id=problem.task_id,
-                    sample_id=k,
-                ))
+                episodes.append(Episode(task_id=task_id, sample_id=k))
 
     return episodes
 

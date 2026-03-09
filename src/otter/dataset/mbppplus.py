@@ -23,9 +23,10 @@ class MBPPPlusDataset(BaseDataset):
             'evalplus/mbppplus',
             cache_dir=str(settings.dataset.cache_dir)
         )
-        self._problems: list[MBPPPlusProblem] = [
-            self._parse(row) for row in raw["test"]
-        ]
+        self._problems: dict[str, MBPPPlusProblem] = {}
+        for row in raw["test"]:
+            p = self._parse(row)
+            self._problems[p.task_id] = p
 
     def _parse(self, row: dict) -> MBPPPlusProblem:
         return MBPPPlusProblem(
@@ -37,14 +38,12 @@ class MBPPPlusDataset(BaseDataset):
             canonical_solution=row["code"],
         )
 
-    def __len__(self) -> int:
-        return len(self._problems)
+    @property
+    def task_ids(self) -> list[str]:
+        return list(self._problems.keys())
 
-    def __getitem__(self, index: int) -> MBPPPlusProblem:
-        return self._problems[index]
-
-    def make_prompt(self, index: int) -> str:
-        problem = self._problems[index]
+    def make_prompt(self, task_id: str) -> str:
+        problem = self._problems[task_id]
         sample = "\n".join(problem.sample_tests)
         return (
             f"{problem.prompt}\n\n"
@@ -56,5 +55,5 @@ class MBPPPlusDataset(BaseDataset):
 if __name__ == "__main__":
     mbpp = MBPPPlusDataset()
     mbpp.load()
-    print(mbpp[0])
-    print(mbpp.make_prompt(0))
+    print(mbpp.task_ids[0])
+    print(mbpp.make_prompt(mbpp.task_ids[0]))
