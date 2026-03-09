@@ -32,7 +32,6 @@ def create_store() -> BaseStore:
         case "line":
             return LineStore(
                 output_dir=settings.experiment.output_dir,
-                max_turns=settings.experiment.max_turns,
             )
         case "dir":
             raise NotImplementedError("DirStore is not implemented yet")
@@ -57,14 +56,11 @@ def build_episodes(ds: dataset.BaseDataset, store: BaseStore) -> list[Episode]:
             eid = f"{problem.task_id}#{k}"
             if eid in existing:
                 ep = existing[eid]
-                if ep.resolved or ep.exhausted:
+                if ep.resolved or ep.exhausted(settings.experiment.max_turns):
                     continue
                 episodes.append(ep)
             else:
-                episodes.append(Episode(
-                    eid=eid,
-                    max_turns=settings.experiment.max_turns,
-                ))
+                episodes.append(Episode(eid=eid))
 
     return episodes
 
