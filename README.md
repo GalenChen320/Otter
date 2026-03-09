@@ -1,16 +1,16 @@
-# CodeEval
+# otter
 
 LLM 代码生成能力评测框架。加载编程题数据集，异步并发调用 LLM 生成代码解答。
 
 ## 项目结构
 
 ```
-CodeEval/
+otter/
 ├── pyproject.toml                  # 项目配置与依赖
 ├── .env.example                    # 环境变量模板（待填写）
 ├── .env                            # 实际环境变量（已 gitignore）
 ├── data/cache/                     # HuggingFace 数据集本地缓存
-└── src/code_eval/
+└── src/otter/
     ├── __init__.py
     ├── pipeline.py                 # 主流程编排（入口）
     ├── logger.py                   # 全局单例 logger
@@ -47,7 +47,7 @@ CodeEval/
 `logger.py` 基于 `LoggerSettings` 构建全局单例 logger，输出到 stderr，可选同时写入文件。格式：`时间 | 级别 | 模块名 | 消息`。
 
 ```python
-from code_eval.logger import logger
+from otter.logger import logger
 ```
 
 ### LLM 调用层

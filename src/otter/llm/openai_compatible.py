@@ -1,7 +1,7 @@
 from openai import AsyncOpenAI
 from .base import BaseLLM
 
-from code_eval.config.setting import settings, ROOT_DIR
+from otter.config.setting import settings, ROOT_DIR
 
 
 class OpenAICompatibleLLM(BaseLLM):
