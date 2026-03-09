@@ -4,6 +4,7 @@ from datasets import load_dataset
 from otter.dataset.base import BaseDataset
 from otter.config.setting import get_settings
 from otter.episode import Episode
+from otter.logger import get_logger
 
 
 @dataclass
@@ -20,6 +21,7 @@ class MBPPPlusDataset(BaseDataset):
 
     def load(self):
         settings = get_settings()
+        logger = get_logger()
         raw = load_dataset(
             'evalplus/mbppplus',
             cache_dir=str(settings.dataset.cache_dir)
@@ -28,6 +30,7 @@ class MBPPPlusDataset(BaseDataset):
         for row in raw["test"]:
             p = self._parse(row)
             self._problems[p.task_id] = p
+        logger.info("loaded dataset mbppplus: %d problems", len(self._problems))
 
     def _parse(self, row: dict) -> MBPPPlusProblem:
         return MBPPPlusProblem(

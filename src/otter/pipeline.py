@@ -4,6 +4,7 @@ from otter import dataset
 from otter import llm
 from otter.config.setting import get_settings
 from otter.episode import Episode, Turn
+from otter.logger import get_logger
 from otter.store import BaseStore, LineStore
 
 
@@ -69,13 +70,16 @@ async def run(
     store: BaseStore,
 ) -> list[Episode]:
     settings = get_settings()
+    logger = get_logger()
     gen_semaphore = asyncio.Semaphore(settings.llm.concurrency)
     episodes = build_episodes(ds, store)
+    logger.info("starting run: %d episodes to process", len(episodes))
 
     async def process(ep: Episode):
         async with gen_semaphore:
+            logger.info("[%s] processing (turn %d)", ep.eid, ep.total_turns + 1)
             messages = ds.make_messages(ep)
-            response = await llm_client.generate(messages, task_id=ep.task_id)
+            response = await llm_client.generate(messages, eid=ep.eid)
             turn = Turn(
                 turn_number=ep.total_turns + 1,
                 prompt=messages[-1]["content"],
@@ -83,12 +87,16 @@ async def run(
             )
             ep.turns.append(turn)
             await store.save_turn(ep, turn)
+            logger.info("[%s] turn %d completed", ep.eid, turn.turn_number)
 
     await asyncio.gather(*[process(ep) for ep in episodes])
+    resolved = sum(1 for ep in episodes if ep.resolved)
+    logger.info("run finished: %d/%d episodes resolved", resolved, len(episodes))
     return episodes
 
 
 async def main():
+    logger = get_logger()
     ds = create_dataset()
     ds.load()
 
@@ -98,4 +106,4 @@ async def main():
 
     store = create_store()
     episodes = await run(ds, llm_client, store)
-    print(f"processed {len(episodes)} episodes")
+    logger.info("done: %d episodes processed", len(episodes))

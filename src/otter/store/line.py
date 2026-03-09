@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from otter.episode import Episode, Turn
+from otter.logger import get_logger
 from otter.store.base import BaseStore
 
 
@@ -23,6 +24,7 @@ class LineStore(BaseStore):
         return self._dir / f"{eid}.jsonl"
 
     def load_episodes(self) -> dict[str, Episode]:
+        logger = get_logger()
         episodes: dict[str, Episode] = {}
         for path in self._dir.glob("*.jsonl"):
             eid = path.stem
@@ -37,9 +39,12 @@ class LineStore(BaseStore):
                 sample_id=int(sample_id),
                 turns=turns,
             )
+        logger.info("loaded %d existing episodes from %s", len(episodes), self._dir)
         return episodes
 
     async def save_turn(self, episode: Episode, turn: Turn) -> None:
+        logger = get_logger()
         path = self._episode_path(episode.eid)
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(turn.to_dict(), ensure_ascii=False) + "\n")
+        logger.debug("[%s] saved turn %d to %s", episode.eid, turn.turn_number, path)
