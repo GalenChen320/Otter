@@ -3,7 +3,7 @@ import asyncio
 from otter import dataset
 from otter import llm
 from otter.config.setting import get_settings
-from otter.episode import Episode
+from otter.episode import Episode, Turn
 from otter.store import BaseStore, LineStore
 
 
@@ -43,7 +43,6 @@ def build_episodes(ds: dataset.BaseDataset, store: BaseStore) -> list[Episode]:
     """构建待处理的 Episode 列表。
 
     将每道题展开 samples_per_problem 份，每份是独立的 Episode。
-    eid 格式："{原始task_id}#{sample序号}"。
     已完成的（resolved 或 exhausted）跳过，部分完成的继续。
     """
     settings = get_settings()
@@ -75,8 +74,15 @@ async def run(
 
     async def process(ep: Episode):
         async with gen_semaphore:
-            # TODO: 多轮循环（生成 → 执行 → feedback），每完成一个 Turn 调用 store.save_turn()
-            pass
+            prompt = ds.make_prompt(ep.task_id)
+            response = await llm_client.generate(prompt, task_id=ep.task_id)
+            turn = Turn(
+                turn_number=ep.total_turns + 1,
+                prompt=prompt,
+                response=response,
+            )
+            ep.turns.append(turn)
+            await store.save_turn(ep, turn)
 
     await asyncio.gather(*[process(ep) for ep in episodes])
     return episodes
