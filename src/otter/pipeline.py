@@ -2,10 +2,11 @@ import asyncio
 
 from otter import datasets
 from otter import llm
-from otter.config.setting import settings
+from otter.config.setting import get_settings
 
 
 def create_dataset() -> datasets.BaseDataset:
+    settings = get_settings()
     match settings.dataset.dataset_name:
         case "humaneval": return datasets.HumanEvalDataset()
         case "apps": return datasets.APPSDataset()
@@ -15,6 +16,7 @@ def create_dataset() -> datasets.BaseDataset:
 
 
 def create_llm() -> llm.BaseLLM:
+    settings = get_settings()
     match settings.llm.response_format:
         case "openai_compatible":
             return llm.OpenAICompatibleLLM()
@@ -23,7 +25,7 @@ def create_llm() -> llm.BaseLLM:
 
 
 async def run(dataset: datasets.BaseDataset, llm_client: llm.BaseLLM) -> list[dict]:
-
+    settings = get_settings()
     results: list[dict] = []
     gen_semaphore = asyncio.Semaphore(settings.llm.concurrency)
 
@@ -59,7 +61,3 @@ async def main():
 
     results = await run(dataset, llm_client)
     print(f"generated {len(results)} solutions")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

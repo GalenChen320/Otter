@@ -1,13 +1,15 @@
 import asyncio
 from abc import ABC, abstractmethod
 
-from otter.config.setting import settings
-from otter.logger import logger
+from otter.config.setting import get_settings
+from otter.logger import get_logger
 
 
 class BaseLLM(ABC):
 
     async def generate(self, prompt: str, *, task_id: str = "") -> str:
+        settings = get_settings()
+        logger = get_logger()
         last_exc: Exception | None = None
         for attempt in range(1, settings.llm.max_retries + 1):
             try:
@@ -31,6 +33,7 @@ class BaseLLM(ABC):
         pass
 
     async def ping(self) -> bool:
+        logger = get_logger()
         try:
             await self._generate("hi")
             logger.info("ping succeeded")
