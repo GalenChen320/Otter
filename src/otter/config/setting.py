@@ -30,13 +30,12 @@ class LLMSettings(BaseSettings):
     retry_base_delay: float = 1.0
 
 
-class ExecutorSettings(BaseSettings):
+class EnvironmentSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="EXECUTOR__", 
+        env_prefix="ENVIRONMENT__", 
         extra="ignore"
     )
-    concurrency: int = 5         # Docker 并发数
-    timeout: int = 10            # 每个容器最多跑几秒
+    pass # 先不考虑具体的参数
 
 
 _DATASET_DEFAULT_STORE: dict[str, str] = {
@@ -96,7 +95,7 @@ class Settings(BaseSettings):
     dataset: DatasetSettings
     llm: LLMSettings
     log: LoggerSettings
-    executor: ExecutorSettings
+    environment: EnvironmentSettings
     experiment: ExperimentSettings
 
 
@@ -122,6 +121,6 @@ def _build_settings() -> Settings:
         dataset=DatasetSettings(_env_file=env),
         llm=LLMSettings(_env_file=env),
         log=LoggerSettings(_env_file=env),
-        executor=ExecutorSettings(_env_file=env),
+        environment=EnvironmentSettings(_env_file=env),
         experiment=ExperimentSettings(_env_file=env),
     )
