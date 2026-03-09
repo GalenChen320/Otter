@@ -4,7 +4,7 @@ from otter import dataset
 from otter import llm
 from otter.config.setting import get_settings
 from otter.episode import Episode
-from otter.store import BaseStore
+from otter.store import BaseStore, LineStore
 
 
 def create_dataset() -> dataset.BaseDataset:
@@ -27,8 +27,17 @@ def create_llm() -> llm.BaseLLM:
 
 
 def create_store() -> BaseStore:
-    # TODO: 根据 settings 创建具体的 Store 实现
-    raise NotImplementedError
+    settings = get_settings()
+    match settings.dataset.resolved_store_type:
+        case "line":
+            return LineStore(
+                output_dir=settings.experiment.output_dir,
+                max_turns=settings.experiment.max_turns,
+            )
+        case "dir":
+            raise NotImplementedError("DirStore is not implemented yet")
+        case _:
+            raise ValueError(f"unknown store_type: {settings.dataset.resolved_store_type}")
 
 
 def build_episodes(ds: dataset.BaseDataset, store: BaseStore) -> list[Episode]:
