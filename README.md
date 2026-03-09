@@ -1,5 +1,9 @@
 # Otter
 
+<p align="center">
+  <img src="assets/otter.jpg" alt="Otter" width="300">
+</p>
+
 原生支持多轮对话反馈的 LLM 代码能力评测框架。
 
 ## 快速开始
