@@ -64,8 +64,13 @@ class Turn:
 
 @dataclass
 class Episode:
-    eid: str
+    task_id: str
+    sample_id: int
     turns: list[Turn] = field(default_factory=list)
+
+    @property
+    def eid(self) -> str:
+        return f"{self.task_id}#{self.sample_id}"
 
     @property
     def resolved(self) -> bool:
