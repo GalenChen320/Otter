@@ -14,7 +14,10 @@ def set_env_file(path: str) -> None:
 
 
 class LLMSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="LLM__")
+    model_config = SettingsConfigDict(
+        env_prefix="LLM__", 
+        extra="ignore"
+    )
     api_key: str
     base_url: str
     model: str
@@ -28,13 +31,19 @@ class LLMSettings(BaseSettings):
 
 
 class ExecutorSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="EXECUTOR__")
+    model_config = SettingsConfigDict(
+        env_prefix="EXECUTOR__", 
+        extra="ignore"
+    )
     concurrency: int = 5         # Docker 并发数
     timeout: int = 10            # 每个容器最多跑几秒
 
 
 class DatasetSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="DATASET__")
+    model_config = SettingsConfigDict(
+        env_prefix="DATASET__", 
+        extra="ignore"
+    )
     cache_dir: Path = ROOT_DIR / "data" / "cache"
     dataset_name: Literal[
         "humaneval",
@@ -44,13 +53,19 @@ class DatasetSettings(BaseSettings):
 
 
 class LoggerSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="LOG__")
+    model_config = SettingsConfigDict(
+        env_prefix="LOG__", 
+        extra="ignore"
+    )
     level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     log_file: Path | None = None
 
 
 class ExperimentSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="EXPERIMENT__")
+    model_config = SettingsConfigDict(
+        env_prefix="EXPERIMENT__", 
+        extra="ignore"
+    )
     max_turns: int = 1
     feedback_strategy: Literal[
         "minimal",
