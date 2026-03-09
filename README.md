@@ -1,11 +1,11 @@
-# otter
+# Otter
 
 LLM 代码生成能力评测框架。加载编程题数据集，异步并发调用 LLM 生成代码解答。
 
 ## 项目结构
 
 ```
-otter/
+Otter/
 ├── pyproject.toml                  # 项目配置与依赖
 ├── .env.example                    # 环境变量模板（待填写）
 ├── .env                            # 实际环境变量（已 gitignore）
