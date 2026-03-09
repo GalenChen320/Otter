@@ -5,6 +5,7 @@
             "name": "otter run",
             "type": "debugpy",
             "request": "launch",
+            "envFile": "",
             "program": "${workspaceFolder}/src/otter/cli.py",
             "args": ["run", "--env", ".env.local"],
             "cwd": "${workspaceFolder}",
