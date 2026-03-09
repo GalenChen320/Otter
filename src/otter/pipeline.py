@@ -15,11 +15,11 @@ def create_dataset() -> datasets.BaseDataset:
 
 
 def create_llm() -> llm.BaseLLM:
-    match settings.llm.llm_type:
+    match settings.llm.response_format:
         case "openai_compatible":
             return llm.OpenAICompatibleLLM()
         case _:
-            raise ValueError(f"unknown llm: {settings.llm.llm_type}")
+            raise ValueError(f"unknown response_format: {settings.llm.response_format}")
 
 
 async def run(dataset: datasets.BaseDataset, llm_client: llm.BaseLLM) -> list[dict]:

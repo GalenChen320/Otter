@@ -6,9 +6,7 @@ from otter.config.setting import settings, ROOT_DIR
 
 class APPSDataset(BaseDataset):
 
-
     def load(self):
-        cfg = settings.dataset.apps
         dataset = load_dataset("codeparrot/apps")
 
 
