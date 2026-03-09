@@ -5,17 +5,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT_DIR = Path(__file__).parent.parent.parent.parent
 
+_env_file: str = ".env"
 
-def make_settings_config(**kwargs) -> SettingsConfigDict:
-    return SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        **kwargs
-    )
+
+def set_env_file(path: str) -> None:
+    global _env_file
+    _env_file = path
 
 
 class LLMSettings(BaseSettings):
-    model_config = make_settings_config(env_prefix="LLM__")
+    model_config = SettingsConfigDict(env_prefix="LLM__")
     api_key: str
     base_url: str
     model: str
@@ -29,13 +28,13 @@ class LLMSettings(BaseSettings):
 
 
 class ExecutorSettings(BaseSettings):
-    model_config = make_settings_config(env_prefix="EXECUTOR__")
+    model_config = SettingsConfigDict(env_prefix="EXECUTOR__")
     concurrency: int = 5         # Docker 并发数
     timeout: int = 10            # 每个容器最多跑几秒
 
 
 class DatasetSettings(BaseSettings):
-    model_config = make_settings_config(env_prefix="DATASET__")
+    model_config = SettingsConfigDict(env_prefix="DATASET__")
     cache_dir: Path = ROOT_DIR / "data" / "cache"
     dataset_name: Literal[
         "humaneval",
@@ -45,9 +44,19 @@ class DatasetSettings(BaseSettings):
 
 
 class LoggerSettings(BaseSettings):
-    model_config = make_settings_config(env_prefix="LOG__")
+    model_config = SettingsConfigDict(env_prefix="LOG__")
     level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     log_file: Path | None = None
+
+
+class ExperimentSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="EXPERIMENT__")
+    max_turns: int = 1
+    feedback_strategy: Literal[
+        "minimal",
+        "error_message",
+        "progressive"
+    ] = "error_message"
 
 
 class Settings(BaseSettings):
@@ -55,6 +64,31 @@ class Settings(BaseSettings):
     llm: LLMSettings = LLMSettings()
     log: LoggerSettings = LoggerSettings()
     executor: ExecutorSettings = ExecutorSettings()
+    experiment: ExperimentSettings = ExperimentSettings()
 
 
-settings = Settings()
+_settings: Settings | None = None
+
+
+def get_settings() -> Settings:
+    global _settings
+    if _settings is None:
+        _settings = _build_settings()
+    return _settings
+
+
+def init_settings() -> Settings:
+    global _settings
+    _settings = _build_settings()
+    return _settings
+
+
+def _build_settings() -> Settings:
+    env = _env_file
+    return Settings(
+        dataset=DatasetSettings(_env_file=env),
+        llm=LLMSettings(_env_file=env),
+        log=LoggerSettings(_env_file=env),
+        executor=ExecutorSettings(_env_file=env),
+        experiment=ExperimentSettings(_env_file=env),
+    )

@@ -90,3 +90,5 @@ from otter.logger import logger
 - `datasets==4.6.1` — HuggingFace Datasets
 - `pydantic-settings==2.13.1` — 配置管理
 - `openai==2.26.0` — OpenAI API 客户端
+
+但是我希望可以类似于otter run 这样调用，而且接收命令行参数，指定使用哪个env文件，默认就是.env

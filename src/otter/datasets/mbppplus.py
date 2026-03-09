@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datasets import load_dataset
 
 from otter.datasets.base import BaseDataset
-from otter.config.setting import settings
+from otter.config.setting import get_settings
 
 
 @dataclass
@@ -18,6 +18,7 @@ class MBPPPlusProblem:
 class MBPPPlusDataset(BaseDataset):
 
     def load(self):
+        settings = get_settings()
         raw = load_dataset(
             'evalplus/mbppplus',
             cache_dir=str(settings.dataset.cache_dir)
