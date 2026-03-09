@@ -1,8 +1,8 @@
 import asyncio
 from abc import ABC, abstractmethod
 
-from code_eval.config.setting import settings
-from code_eval.logger import logger
+from otter.config.setting import settings
+from otter.logger import logger
 
 
 class BaseLLM(ABC):

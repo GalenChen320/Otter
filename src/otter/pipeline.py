@@ -1,8 +1,8 @@
 import asyncio
 
-from code_eval import datasets
-from code_eval import llm
-from code_eval.config.setting import settings
+from otter import datasets
+from otter import llm
+from otter.config.setting import settings
 
 
 def create_dataset() -> datasets.BaseDataset:

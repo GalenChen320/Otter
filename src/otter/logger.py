@@ -1,13 +1,13 @@
 import sys
 import logging
 
-from code_eval.config.setting import settings
+from otter.config.setting import settings
 
 _LOG_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
 
 
 def _build_logger() -> logging.Logger:
-    logger = logging.getLogger("code_eval")
+    logger = logging.getLogger("main")
     logger.setLevel(settings.log.level)
     logger.handlers.clear()
 
