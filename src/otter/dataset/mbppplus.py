@@ -3,6 +3,7 @@ from datasets import load_dataset
 
 from otter.dataset.base import BaseDataset
 from otter.config.setting import get_settings
+from otter.episode import Episode
 
 
 @dataclass
@@ -42,7 +43,7 @@ class MBPPPlusDataset(BaseDataset):
     def task_ids(self) -> list[str]:
         return list(self._problems.keys())
 
-    def make_prompt(self, task_id: str) -> str:
+    def _format_prompt(self, task_id: str) -> str:
         problem = self._problems[task_id]
         sample = "\n".join(problem.sample_tests)
         return (
@@ -51,9 +52,16 @@ class MBPPPlusDataset(BaseDataset):
             f"{sample}"
         )
 
+    def make_messages(self, episode: Episode) -> list[dict]:
+        messages = [{"role": "user", "content": self._format_prompt(episode.task_id)}]
+        for turn in episode.turns:
+            messages.append({"role": "assistant", "content": turn.response})
+            messages.append({"role": "user", "content": "Your code is incorrect. Please try again."})
+        return messages
+
     
 if __name__ == "__main__":
     mbpp = MBPPPlusDataset()
     mbpp.load()
     print(mbpp.task_ids[0])
-    print(mbpp.make_prompt(mbpp.task_ids[0]))
+    print(mbpp._format_prompt(mbpp.task_ids[0]))

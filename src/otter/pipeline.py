@@ -74,11 +74,11 @@ async def run(
 
     async def process(ep: Episode):
         async with gen_semaphore:
-            prompt = ds.make_prompt(ep.task_id)
-            response = await llm_client.generate(prompt, task_id=ep.task_id)
+            messages = ds.make_messages(ep)
+            response = await llm_client.generate(messages, task_id=ep.task_id)
             turn = Turn(
                 turn_number=ep.total_turns + 1,
-                prompt=prompt,
+                prompt=messages[-1]["content"],
                 response=response,
             )
             ep.turns.append(turn)
