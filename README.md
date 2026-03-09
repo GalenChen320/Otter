@@ -1,17 +1,14 @@
-<table>
+<table border="0">
   <tr>
-    <td width="30%" align="center">
+    <td width="20%" align="center">
       <img src="assets/otter.jpg" width="100%" alt="logo">
     </td>
     <td valign="top" align="left">
-      <h1>项目大标题</h1>
-      <sub>这里是一行副标题小字描述，简短介绍项目内容</sub>
+      <h1>Otter</h1>
+      <sub>原生支持多轮对话反馈的 LLM 代码能力评测框架。</sub>
     </td>
   </tr>
 </table>
-
-
-原生支持多轮对话反馈的 LLM 代码能力评测框架。
 
 ## 快速开始
 
