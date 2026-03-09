@@ -68,9 +68,13 @@ class Episode:
     sample_id: int
     turns: list[Turn] = field(default_factory=list)
 
+    @staticmethod
+    def make_eid(task_id: str, sample_id: int) -> str:
+        return f"{task_id}#{sample_id}"
+
     @property
     def eid(self) -> str:
-        return f"{self.task_id}#{self.sample_id}"
+        return Episode.make_eid(self.task_id, self.sample_id)
 
     @property
     def resolved(self) -> bool:
