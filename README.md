@@ -1,11 +1,11 @@
-<table table border="0" cellspacing="0" cellpadding="0">
+<table table>
   <tr>
     <td width="20%" align="center">
       <img src="assets/otter.jpg" width="100%" alt="logo">
     </td>
     <td valign="top" align="left">
       <h1>Otter</h1>
-      <sub>原生支持多轮对话反馈的 LLM 代码能力评测框架。</sub>
+      <p>原生支持多轮对话反馈的 LLM 代码能力评测框架。</p>
     </td>
   </tr>
 </table>
@@ -25,35 +25,6 @@ otter run
 
 # 指定环境变量文件
 otter run --env .env.local
-```
-
-## 项目结构
-
-```
-Otter/
-├── pyproject.toml                  # 项目配置与依赖
-├── .env.example                    # 环境变量模板
-├── .env                            # 实际环境变量（已 gitignore）
-├── data/cache/                     # HuggingFace 数据集本地缓存
-└── src/otter/
-    ├── __init__.py
-    ├── cli.py                      # CLI 入口（typer）
-    ├── pipeline.py                 # 主流程编排
-    ├── episode.py                  # 核心数据类：Turn, Episode, ExecutionResult
-    ├── logger.py                   # 全局日志（延迟初始化）
-    ├── config/
-    │   ├── __init__.py
-    │   └── setting.py              # pydantic-settings 配置管理（延迟初始化）
-    ├── dataset/
-    │   ├── __init__.py
-    │   ├── base.py                 # BaseDataset 抽象基类
-    │   ├── mbppplus.py             # MBPP+ 数据集（完整实现）
-    │   ├── humaneval.py            # HumanEval 数据集（仅实现 load）
-    │   └── apps.py                 # APPS 数据集（仅实现 load）
-    └── llm/
-        ├── __init__.py
-        ├── base.py                 # BaseLLM 抽象基类（重试、指数退避、ping 检测）
-        └── openai_compatible.py    # OpenAI 兼容接口 LLM 实现
 ```
 
 ## 配置

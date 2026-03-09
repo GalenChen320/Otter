@@ -8,24 +8,63 @@ class ExecutionResult:
     stderr: str = ""
     timed_out: bool = False
 
+    def to_dict(self) -> dict:
+        return {
+            "passed": self.passed,
+            "stdout": self.stdout,
+            "stderr": self.stderr,
+            "timed_out": self.timed_out,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "ExecutionResult":
+        return cls(
+            passed=d["passed"],
+            stdout=d.get("stdout", ""),
+            stderr=d.get("stderr", ""),
+            timed_out=d.get("timed_out", False),
+        )
+
 
 @dataclass
 class Turn:
     turn_number: int
     prompt: str
     response: str = ""
-    code: str = ""
     execution_result: ExecutionResult | None = None
 
     @property
     def passed(self) -> bool:
         return self.execution_result is not None and self.execution_result.passed
 
+    def to_dict(self) -> dict:
+        d: dict = {
+            "turn_number": self.turn_number,
+            "prompt": self.prompt,
+            "response": self.response,
+        }
+        if self.execution_result is not None:
+            d.update(self.execution_result.to_dict())
+        else:
+            d["passed"] = None
+        return d
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "Turn":
+        er = None
+        if d.get("passed") is not None:
+            er = ExecutionResult.from_dict(d)
+        return cls(
+            turn_number=d["turn_number"],
+            prompt=d["prompt"],
+            response=d.get("response", ""),
+            execution_result=er,
+        )
+
 
 @dataclass
 class Episode:
     eid: str
-    max_turns: int
     turns: list[Turn] = field(default_factory=list)
 
     @property
@@ -36,6 +75,5 @@ class Episode:
     def total_turns(self) -> int:
         return len(self.turns)
 
-    @property
-    def exhausted(self) -> bool:
-        return self.total_turns >= self.max_turns
+    def exhausted(self, max_turns: int) -> bool:
+        return self.total_turns >= max_turns
