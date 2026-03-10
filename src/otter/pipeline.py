@@ -33,26 +33,27 @@ def create_store() -> Store:
     return Store(output_dir=settings.experiment.output_dir)
 
 
-def build_episodes(ds: dataset.BaseDataset, store: Store) -> list[Episode]:
-    """构建待处理的 Episode 列表。
+def get_pending_episodes(ds: dataset.BaseDataset, store: Store) -> list[Episode]:
+    """筛选未完成的 Episode。
 
     将每道题展开 samples_per_problem 份，每份是独立的 Episode。
     已完成的（resolved 或 exhausted）跳过，部分完成的继续。
     """
     settings = get_settings()
-    existing = store.load_episodes()
+    existing = store.sync_episodes()
     episodes: list[Episode] = []
 
     for task_id in ds.task_ids:
         for k in range(settings.llm.samples_per_problem):
             eid = Episode.make_eid(task_id, k)
+            ep_dir = ds.base_dir / eid
             if eid in existing:
                 ep = existing[eid]
                 if ep.resolved or ep.exhausted(settings.experiment.max_turns):
                     continue
                 episodes.append(ep)
             else:
-                episodes.append(Episode(task_id=task_id, sample_id=k))
+                episodes.append(Episode(task_id=task_id, sample_id=k, base_dir=ep_dir))
 
     return episodes
 
@@ -65,7 +66,7 @@ async def run(
     settings = get_settings()
     logger = get_logger()
     gen_semaphore = asyncio.Semaphore(settings.llm.concurrency)
-    episodes = build_episodes(ds, store)
+    episodes = get_pending_episodes(ds, store)
     logger.info("starting run: %d episodes to process", len(episodes))
 
     async def process(ep: Episode):
@@ -74,8 +75,8 @@ async def run(
 
             await ds.setup_episode(ep)
 
-            # 1. 分配 Turn（内部 append 到 episode）
-            store.allocate_turn(ep)
+            # 1. 创建新 Turn
+            ep.next_turn()
 
             # 2. Dataset 写 input
             ds.write_input(ep)
@@ -116,6 +117,7 @@ async def run(
 
 
 async def main():
+    settings = get_settings()
     logger = get_logger()
     ds = create_dataset()
     ds.load()
@@ -126,7 +128,7 @@ async def main():
 
     store = create_store()
 
-    await ds.setup()
+    await ds.setup(settings.experiment.output_dir)
     try:
         episodes = await run(ds, llm_client, store)
         logger.info("done: %d episodes processed", len(episodes))
