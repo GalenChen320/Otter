@@ -3,7 +3,8 @@ import asyncio
 from otter import dataset
 from otter import llm
 from otter.config.setting import get_settings
-from otter.episode import Episode, Turn
+from otter.episode import Episode
+from otter.environment.docker import DockerEnvironment
 from otter.logger import get_logger
 from otter.store import Store
 
@@ -70,16 +71,43 @@ async def run(
     async def process(ep: Episode):
         async with gen_semaphore:
             logger.info("[%s] processing (turn %d)", ep.eid, ep.total_turns + 1)
+
+            await ds.setup_episode(ep)
+
+            # 1. 分配 Turn（内部 append 到 episode）
+            store.allocate_turn(ep)
+
+            # 2. Dataset 写 input
+            ds.write_input(ep)
+
+            # 3. Dataset 构建 messages
             messages = ds.make_messages(ep)
+
+            # 4. LLM 生成
             response = await llm_client.generate(messages, eid=ep.eid)
-            turn = Turn(
-                turn_number=ep.total_turns + 1,
-                prompt=messages[-1]["content"],
-                response=response,
-            )
-            ep.turns.append(turn)
-            await store.save_turn(ep, turn)
-            logger.info("[%s] turn %d completed", ep.eid, turn.turn_number)
+
+            # 5. Dataset 写 response
+            ds.write_response(ep, response)
+
+            # 6. Dataset 构建 ExecSpec
+            spec = ds.to_exec_spec(ep)
+
+            # 7. Environment 执行
+            observation = await DockerEnvironment.execute(spec)
+
+            # 8. Dataset 写 observation
+            ds.write_observation(ep, observation)
+
+            # 9. Dataset 判定
+            ep.turns[-1].passed = ds.judge(ep, observation)
+
+            # 10. 保存 meta（标记 turn 完成）
+            store.save_meta(ep)
+
+            await ds.teardown_episode(ep)
+
+            logger.info("[%s] turn %d completed (passed=%s)",
+                        ep.eid, ep.total_turns, ep.turns[-1].passed)
 
     await asyncio.gather(*[process(ep) for ep in episodes])
     resolved = sum(1 for ep in episodes if ep.resolved)
@@ -97,5 +125,10 @@ async def main():
         raise SystemExit("LLM ping failed, check your config")
 
     store = create_store()
-    episodes = await run(ds, llm_client, store)
-    logger.info("done: %d episodes processed", len(episodes))
+
+    await ds.setup()
+    try:
+        episodes = await run(ds, llm_client, store)
+        logger.info("done: %d episodes processed", len(episodes))
+    finally:
+        await ds.teardown()

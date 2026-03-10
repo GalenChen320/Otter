@@ -1,9 +1,12 @@
+import json
+import re
 from dataclasses import dataclass
 from datasets import load_dataset
 
 from otter.dataset.base import BaseDataset
 from otter.config.setting import get_settings
-from otter.episode import Episode
+from otter.episode import Episode, ExecutionObservation
+from otter.environment.docker import DockerEnvironment, DockerExecSpec
 from otter.logger import get_logger
 
 
@@ -19,6 +22,8 @@ class MBPPPlusProblem:
 
 class MBPPPlusDataset(BaseDataset):
 
+    IMAGE_TAG = "python:3.11-slim"
+
     def load(self):
         settings = get_settings()
         logger = get_logger()
@@ -31,6 +36,12 @@ class MBPPPlusDataset(BaseDataset):
             p = self._parse(row)
             self._problems[p.task_id] = p
         logger.info("loaded dataset mbppplus: %d problems", len(self._problems))
+
+    async def setup(self) -> None:
+        await DockerEnvironment.build_image(self.IMAGE_TAG, "FROM python:3.11-slim\n")
+
+    async def teardown(self) -> None:
+        await DockerEnvironment.remove_image(self.IMAGE_TAG)
 
     def _parse(self, row: dict) -> MBPPPlusProblem:
         return MBPPPlusProblem(
@@ -55,16 +66,63 @@ class MBPPPlusDataset(BaseDataset):
             f"{sample}"
         )
 
+    def _extract_code(self, response: str) -> str:
+        """从 LLM response 中提取 Python 代码块。"""
+        pattern = r"```(?:python)?\s*\n(.*?)```"
+        match = re.search(pattern, response, re.DOTALL)
+        if match:
+            return match.group(1).strip()
+        return response.strip()
+
+    def write_input(self, episode: Episode) -> None:
+        turn = episode.turns[-1]
+        prompt = self._format_prompt(episode.task_id)
+        (turn.input_path / "prompt.txt").write_text(prompt, encoding="utf-8")
+
     def make_messages(self, episode: Episode) -> list[dict]:
-        messages = [{"role": "user", "content": self._format_prompt(episode.task_id)}]
-        for turn in episode.turns:
-            messages.append({"role": "assistant", "content": turn.response})
+        turn = episode.turns[-1]
+        prompt = (turn.input_path / "prompt.txt").read_text(encoding="utf-8")
+        messages = [{"role": "user", "content": prompt}]
+
+        # 历史 turn 的 response + feedback
+        for prev_turn in episode.turns[:-1]:
+            response_file = prev_turn.response_path / "response.txt"
+            prev_response = response_file.read_text(encoding="utf-8")
+            messages.append({"role": "assistant", "content": prev_response})
             messages.append({"role": "user", "content": "Your code is incorrect. Please try again."})
+
         return messages
 
-    
-if __name__ == "__main__":
-    mbpp = MBPPPlusDataset()
-    mbpp.load()
-    print(mbpp.task_ids[0])
-    print(mbpp._format_prompt(mbpp.task_ids[0]))
+    def write_response(self, episode: Episode, response: str) -> None:
+        turn = episode.turns[-1]
+        (turn.response_path / "response.txt").write_text(response, encoding="utf-8")
+
+    def to_exec_spec(self, episode: Episode) -> DockerExecSpec:
+        turn = episode.turns[-1]
+        response = (turn.response_path / "response.txt").read_text(encoding="utf-8")
+        code = self._extract_code(response)
+
+        problem = self._problems[episode.task_id]
+        imports = "\n".join(problem.extra_imports)
+        full_code = f"{imports}\n\n{code}\n\n{problem.official_tests}"
+
+        return DockerExecSpec(
+            image_tag=self.IMAGE_TAG,
+            files_in=[(full_code, "/tmp/solution.py")],
+            commands=["python /tmp/solution.py"],
+        )
+
+    def write_observation(self, episode: Episode, observation: ExecutionObservation) -> None:
+        turn = episode.turns[-1]
+        obs_dict = {
+            "stdout": observation.stdout,
+            "stderr": observation.stderr,
+            "returncode": observation.returncode,
+            "timed_out": observation.timed_out,
+        }
+        (turn.observation_path / "observation.json").write_text(
+            json.dumps(obs_dict, ensure_ascii=False, indent=2), encoding="utf-8",
+        )
+
+    def judge(self, episode: Episode, observation: ExecutionObservation) -> bool:
+        return observation.returncode == 0 and not observation.timed_out
