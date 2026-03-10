@@ -33,8 +33,8 @@ class Store:
     def _turn_dir(self, eid: str, turn_index: int) -> Path:
         return self._episode_dir(eid) / f"turn_{turn_index + 1}"
 
-    def allocate_turn(self, episode: Episode) -> Turn:
-        """为 Episode 分配下一个 Turn，创建目录结构，返回带路径的 Turn。"""
+    def allocate_turn(self, episode: Episode) -> None:
+        """为 Episode 分配下一个 Turn，创建目录结构，append 到 episode。"""
         turn_index = len(episode.turns)
         turn_dir = self._turn_dir(episode.eid, turn_index)
 
@@ -46,17 +46,18 @@ class Store:
         response_dir.mkdir(parents=True, exist_ok=True)
         observation_dir.mkdir(parents=True, exist_ok=True)
 
-        return Turn(
+        turn = Turn(
             input_path=input_dir,
             response_path=response_dir,
             observation_path=observation_dir,
         )
+        episode.turns.append(turn)
 
-    def save_meta(self, episode: Episode, turn_index: int) -> None:
-        """保存指定 Turn 的元信息。"""
+    def save_meta(self, episode: Episode) -> None:
+        """保存最新 Turn 的元信息，标记 turn 完成。"""
+        turn_index = len(episode.turns) - 1
         turn = episode.turns[turn_index]
         turn_dir = self._turn_dir(episode.eid, turn_index)
-        turn_dir.mkdir(parents=True, exist_ok=True)
 
         meta = {"passed": turn.passed}
         meta_path = turn_dir / self.META_FILENAME
@@ -83,21 +84,22 @@ class Store:
 
             turns: list[Turn] = []
             for turn_dir in turn_dirs:
+                meta_path = turn_dir / self.META_FILENAME
+                if not meta_path.exists():
+                    # 未完成的 turn，跳过
+                    continue
+
                 input_dir = turn_dir / "input"
                 response_dir = turn_dir / "response"
                 observation_dir = turn_dir / "observation"
 
-                passed = None
-                meta_path = turn_dir / self.META_FILENAME
-                if meta_path.exists():
-                    meta = json.loads(meta_path.read_text(encoding="utf-8"))
-                    passed = meta.get("passed")
+                meta = json.loads(meta_path.read_text(encoding="utf-8"))
 
                 turns.append(Turn(
                     input_path=input_dir if input_dir.exists() else None,
                     response_path=response_dir if response_dir.exists() else None,
                     observation_path=observation_dir if observation_dir.exists() else None,
-                    passed=passed,
+                    passed=meta.get("passed"),
                 ))
 
             episodes[eid] = Episode(
