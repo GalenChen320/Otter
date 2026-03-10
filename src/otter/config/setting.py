@@ -52,13 +52,6 @@ class EnvironmentSettings(BaseSettings):
     docker: DockerSettings = DockerSettings()
 
 
-_DATASET_DEFAULT_STORE: dict[str, str] = {
-    "humaneval": "line",
-    "apps": "line",
-    "mbppplus": "line",
-}
-
-
 class DatasetSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="DATASET__", 
@@ -70,13 +63,6 @@ class DatasetSettings(BaseSettings):
         "apps",
         "mbppplus"
     ] = "mbppplus"
-    store_type: Literal["line", "dir"] | None = None
-
-    @property
-    def resolved_store_type(self) -> str:
-        if self.store_type is not None:
-            return self.store_type
-        return _DATASET_DEFAULT_STORE[self.dataset_name]
 
 
 class LoggerSettings(BaseSettings):

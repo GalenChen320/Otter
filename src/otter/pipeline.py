@@ -5,7 +5,7 @@ from otter import llm
 from otter.config.setting import get_settings
 from otter.episode import Episode, Turn
 from otter.logger import get_logger
-from otter.store import BaseStore, LineStore
+from otter.store import Store
 
 
 def create_dataset() -> dataset.BaseDataset:
@@ -27,20 +27,12 @@ def create_llm() -> llm.BaseLLM:
             raise ValueError(f"unknown response_format: {settings.llm.response_format}")
 
 
-def create_store() -> BaseStore:
+def create_store() -> Store:
     settings = get_settings()
-    match settings.dataset.resolved_store_type:
-        case "line":
-            return LineStore(
-                output_dir=settings.experiment.output_dir,
-            )
-        case "dir":
-            raise NotImplementedError("DirStore is not implemented yet")
-        case _:
-            raise ValueError(f"unknown store_type: {settings.dataset.resolved_store_type}")
+    return Store(output_dir=settings.experiment.output_dir)
 
 
-def build_episodes(ds: dataset.BaseDataset, store: BaseStore) -> list[Episode]:
+def build_episodes(ds: dataset.BaseDataset, store: Store) -> list[Episode]:
     """构建待处理的 Episode 列表。
 
     将每道题展开 samples_per_problem 份，每份是独立的 Episode。
@@ -67,7 +59,7 @@ def build_episodes(ds: dataset.BaseDataset, store: BaseStore) -> list[Episode]:
 async def run(
     ds: dataset.BaseDataset,
     llm_client: llm.BaseLLM,
-    store: BaseStore,
+    store: Store,
 ) -> list[Episode]:
     settings = get_settings()
     logger = get_logger()
