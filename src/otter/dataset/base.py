@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 from otter.episode import Episode, ExecutionObservation
 from otter.environment.base import BaseExecSpec
 
 
 class BaseDataset(ABC):
+    base_dir: Path | None = None
 
     @abstractmethod
     def load(self) -> None:
@@ -17,9 +19,9 @@ class BaseDataset(ABC):
 
     # ── 生命周期 ──
 
-    async def setup(self) -> None:
+    async def setup(self, output_dir: Path) -> None:
         """Dataset 级别初始化，整个评测开始前调用一次。"""
-        pass
+        self.base_dir = output_dir
 
     async def teardown(self) -> None:
         """Dataset 级别资源回收，整个评测结束后调用一次。"""

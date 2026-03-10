@@ -37,7 +37,8 @@ class MBPPPlusDataset(BaseDataset):
             self._problems[p.task_id] = p
         logger.info("loaded dataset mbppplus: %d problems", len(self._problems))
 
-    async def setup(self) -> None:
+    async def setup(self, output_dir) -> None:
+        await super().setup(output_dir)
         await DockerEnvironment.build_image(self.IMAGE_TAG, "FROM python:3.11-slim\n")
 
     async def teardown(self) -> None:

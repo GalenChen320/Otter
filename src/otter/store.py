@@ -33,26 +33,6 @@ class Store:
     def _turn_dir(self, eid: str, turn_index: int) -> Path:
         return self._episode_dir(eid) / f"turn_{turn_index + 1}"
 
-    def allocate_turn(self, episode: Episode) -> None:
-        """为 Episode 分配下一个 Turn，创建目录结构，append 到 episode。"""
-        turn_index = len(episode.turns)
-        turn_dir = self._turn_dir(episode.eid, turn_index)
-
-        input_dir = turn_dir / "input"
-        response_dir = turn_dir / "response"
-        observation_dir = turn_dir / "observation"
-
-        input_dir.mkdir(parents=True, exist_ok=True)
-        response_dir.mkdir(parents=True, exist_ok=True)
-        observation_dir.mkdir(parents=True, exist_ok=True)
-
-        turn = Turn(
-            input_path=input_dir,
-            response_path=response_dir,
-            observation_path=observation_dir,
-        )
-        episode.turns.append(turn)
-
     def save_meta(self, episode: Episode) -> None:
         """保存最新 Turn 的元信息，标记 turn 完成。"""
         turn_index = len(episode.turns) - 1
@@ -65,8 +45,10 @@ class Store:
             json.dumps(meta, ensure_ascii=False), encoding="utf-8",
         )
 
-    def load_episodes(self) -> dict[str, Episode]:
-        """扫描目录结构，重建所有 Episode 和 Turn。"""
+    def sync_episodes(self) -> dict[str, Episode]:
+        """扫描目录结构，清理未完成的 Turn，重建所有 Episode 和 Turn。"""
+        import shutil
+
         logger = get_logger()
         episodes: dict[str, Episode] = {}
 
@@ -86,7 +68,8 @@ class Store:
             for turn_dir in turn_dirs:
                 meta_path = turn_dir / self.META_FILENAME
                 if not meta_path.exists():
-                    # 未完成的 turn，跳过
+                    shutil.rmtree(turn_dir)
+                    logger.info("cleaned incomplete turn: %s", turn_dir)
                     continue
 
                 input_dir = turn_dir / "input"
@@ -106,7 +89,8 @@ class Store:
                 task_id=task_id,
                 sample_id=int(sample_id),
                 turns=turns,
+                base_dir=ep_dir,
             )
 
-        logger.info("loaded %d existing episodes from %s", len(episodes), self._dir)
+        logger.info("synced %d episodes from %s", len(episodes), self._dir)
         return episodes

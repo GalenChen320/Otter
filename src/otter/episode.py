@@ -25,6 +25,7 @@ class Episode:
     task_id: str
     sample_id: int
     turns: list[Turn] = field(default_factory=list)
+    base_dir: Path | None = None
 
     @staticmethod
     def make_eid(task_id: str, sample_id: int) -> str:
@@ -44,3 +45,20 @@ class Episode:
 
     def exhausted(self, max_turns: int) -> bool:
         return self.total_turns >= max_turns
+
+    def next_turn(self) -> None:
+        """创建下一个 Turn，建立目录结构，append 到 turns。"""
+        turn_dir = self.base_dir / f"turn_{len(self.turns) + 1}"
+        input_dir = turn_dir / "input"
+        response_dir = turn_dir / "response"
+        observation_dir = turn_dir / "observation"
+
+        input_dir.mkdir(parents=True, exist_ok=True)
+        response_dir.mkdir(parents=True, exist_ok=True)
+        observation_dir.mkdir(parents=True, exist_ok=True)
+
+        self.turns.append(Turn(
+            input_path=input_dir,
+            response_path=response_dir,
+            observation_path=observation_dir,
+        ))
