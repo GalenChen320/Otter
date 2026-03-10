@@ -3,6 +3,12 @@ from dataclasses import dataclass
 
 
 @dataclass
+class BaseExecSpec:
+    """所有 ExecSpec 的基类。"""
+    pass
+
+
+@dataclass
 class ExecutionObservation:
     """环境执行后的原始观测结果。
 
@@ -16,10 +22,7 @@ class ExecutionObservation:
 
 class BaseEnvironment(ABC):
 
+    @classmethod
     @abstractmethod
-    async def setup(self) -> None:
-        pass
-
-    @abstractmethod
-    async def teardown(self) -> None:
+    async def execute(cls, spec: BaseExecSpec) -> ExecutionObservation:
         pass
