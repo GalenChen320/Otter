@@ -3,8 +3,10 @@ from uuid import uuid4
 from pathlib import Path
 from dataclasses import dataclass, field
 
-from otter.environment.base import ExecutionObservation
+from otter.environment.base import BaseExecSpec, BaseEnvironment, ExecutionObservation
 from otter.environment.utils.docker_utils import (
+    build_image,
+    remove_image,
     create_container,
     start_container,
     remove_container,
@@ -15,36 +17,37 @@ from otter.environment.utils.docker_utils import (
 
 
 @dataclass
-class DockerExecSpec:
+class DockerExecSpec(BaseExecSpec):
     """DockerEnvironment 的执行规格。
 
     由 Dataset 构建，描述一次执行需要做什么。
     """
-    files_in: list[tuple[str, str]]                     # [(文件内容, 容器内绝对路径), ...]
-    commands: list[str]                                  # 按顺序执行的命令
-    files_out: list[tuple[str, Path]] = field(default_factory=list)  # [(容器内路径, 本地路径), ...]
+    image: str = ""                                      # 镜像 tag
+    files_in: list[tuple[str, str]] = field(default_factory=list)   # [(文件内容, 容器内绝对路径), ...]
+    commands: list[str] = field(default_factory=list)    # 按顺序执行的命令
+    files_out: list[tuple[str, Path]] = field(default_factory=list) # [(容器内路径, 本地路径), ...]
+    timeout: int = 10
 
 
-class DockerEnvironment:
+class DockerEnvironment(BaseEnvironment):
 
-    def __init__(self, image: str, timeout: int = 10):
-        self._image = image
-        self._timeout = timeout
+    @classmethod
+    async def build_image(cls, image_tag: str, dockerfile: Path | str, *, exist_ok: bool = True) -> None:
+        """构建镜像。"""
+        await build_image(image_tag, dockerfile, exist_ok=exist_ok)
 
-    async def setup(self) -> None:
-        """全局初始化：确保镜像就绪。"""
-        pass
+    @classmethod
+    async def remove_image(cls, image_tag: str, *, missing_ok: bool = True) -> None:
+        """删除镜像。"""
+        await remove_image(image_tag, missing_ok=missing_ok)
 
-    async def teardown(self) -> None:
-        """全局清理。"""
-        pass
-
-    async def execute(self, spec: DockerExecSpec) -> ExecutionObservation:
+    @classmethod
+    async def execute(cls, spec: DockerExecSpec) -> ExecutionObservation:
         """创建容器 → 注入文件 → 按顺序执行命令 → 导出文件 → 销毁容器。"""
         container_name = f"otter-{uuid4().hex[:8]}"
         try:
             await create_container(
-                self._image, container_name,
+                spec.image, container_name,
                 extra_params={"stdin_open": True, "tty": True},
             )
             await start_container(container_name)
