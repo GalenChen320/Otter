@@ -32,7 +32,7 @@ def is_docker_running() -> bool:
 
 
 
-def build_image(
+def sync_build_image(
         image_tag: str,
         dockerfile: Path | str,
         *,
@@ -87,7 +87,7 @@ def build_image(
             )
 
 
-def remove_image(
+def sync_remove_image(
         image_tag: str, 
         *, 
         missing_ok: bool = False
@@ -111,7 +111,7 @@ def remove_image(
             raise ValueError(f"Image '{image_tag}' not found.")
 
 
-def create_container(
+def sync_create_container(
         image_tag: str,
         container_name: str,
         *,
@@ -157,7 +157,7 @@ def create_container(
     )
 
 
-def remove_container(
+def sync_remove_container(
         container_name: str,
         *,
         missing_ok: bool = False,
@@ -185,7 +185,7 @@ def remove_container(
             raise ValueError(f"Container '{container_name}' not found.")
 
 
-def start_container(
+def sync_start_container(
         container_name: str
     ) -> None:
     """
@@ -205,7 +205,7 @@ def start_container(
         raise ValueError(f"Container '{container_name}' not found.")
 
 
-def stop_container(
+def sync_stop_container(
         container_name: str,
         *,
         timeout: int = 10,
@@ -229,7 +229,7 @@ def stop_container(
         raise ValueError(f"Container '{container_name}' not found.")
 
 
-def run_container(
+def sync_run_container(
         image_tag: str,
         command: str,
         *,
@@ -282,7 +282,7 @@ def run_container(
     )
 
 
-def exec_container(
+def sync_exec_container(
         container_name: str,
         command: str,
         *,
@@ -328,7 +328,7 @@ def exec_container(
     )
 
 
-def copy_to_container(
+def sync_copy_to_container(
         container_name: str,
         src: Path,
         dst: PurePosixPath | str,
@@ -366,7 +366,7 @@ def copy_to_container(
             container.put_archive(str(dst), f.read())
 
 
-def copy_from_container(
+def sync_copy_from_container(
         container_name: str,
         src: PurePosixPath | str,
         dst: Path,
@@ -408,14 +408,14 @@ def copy_from_container(
 
 __all__ = [
     "is_docker_running",
-    "build_image",
-    "remove_image",
-    "create_container",
-    "remove_container",
-    "start_container",
-    "stop_container",
-    "run_container",
-    "exec_container",
-    "copy_to_container",
-    "copy_from_container",
+    "sync_build_image",
+    "sync_remove_image",
+    "sync_create_container",
+    "sync_remove_container",
+    "sync_start_container",
+    "sync_stop_container",
+    "sync_run_container",
+    "sync_exec_container",
+    "sync_copy_to_container",
+    "sync_copy_from_container",
 ]
