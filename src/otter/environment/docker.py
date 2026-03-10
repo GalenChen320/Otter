@@ -5,7 +5,8 @@ from pathlib import Path
 from dataclasses import dataclass, field
 
 from otter.config.setting import get_settings
-from otter.environment.base import BaseExecSpec, BaseEnvironment, ExecutionObservation
+from otter.episode import ExecutionObservation
+from otter.environment.base import BaseExecSpec, BaseEnvironment
 from otter.environment.utils.docker_utils import (
     get_docker_storage_device,
     build_image,
