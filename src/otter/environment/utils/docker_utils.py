@@ -4,6 +4,7 @@ import functools
 from typing import ParamSpec, TypeVar, Callable, Coroutine, Any
 from .sync_docker_utils import (
     is_docker_running,
+    get_docker_storage_device,
     sync_build_image,
     sync_remove_image,
     sync_create_container,
@@ -42,6 +43,7 @@ copy_from_container = _make_async(sync_copy_from_container)
 
 __all__ = [
     "is_docker_running",
+    "get_docker_storage_device",
     "build_image",
     "remove_image",
     "create_container",

@@ -1,4 +1,7 @@
 import docker
+import platform
+import re
+import subprocess
 import tarfile
 import tempfile
 
@@ -30,6 +33,54 @@ def is_docker_running() -> bool:
     except Exception:
         return False
 
+
+def get_docker_storage_device() -> str:
+    """
+    Detect the block device where Docker stores its data.
+
+    Only supports Linux. Returns a path like "/dev/sda" or "/dev/nvme0n1".
+
+    Raises:
+        NotImplementedError: If the current platform is not Linux.
+        RuntimeError:        If the storage device cannot be determined.
+    """
+    if platform.system().lower() != "linux":
+        raise NotImplementedError(f"Unsupported platform: {platform.system()}")
+
+    # 1. Docker root directory
+    try:
+        docker_root = subprocess.check_output(
+            ["docker", "info", "-f", "{{.DockerRootDir}}"],
+            text=True, stderr=subprocess.DEVNULL,
+        ).strip()
+    except Exception:
+        docker_root = "/var/lib/docker"
+
+    if not Path(docker_root).exists():
+        docker_root = "/"
+
+    # 2. Partition backing that path
+    try:
+        partition = subprocess.check_output(
+            ["df", "--output=source", docker_root], text=True,
+        ).strip().splitlines()[-1]
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Cannot identify Docker storage device: {e}") from e
+
+    # 3. Resolve to parent block device
+    try:
+        parent = subprocess.check_output(
+            ["lsblk", "-no", "pkname", partition], text=True,
+        ).strip()
+        if parent:
+            return f"/dev/{parent}"
+    except Exception:
+        pass
+
+    # Fallback: strip partition number from device path
+    if "nvme" in partition:
+        return re.sub(r"p\d+$", "", partition)
+    return re.sub(r"\d+$", "", partition)
 
 
 def sync_build_image(
@@ -408,6 +459,7 @@ def sync_copy_from_container(
 
 __all__ = [
     "is_docker_running",
+    "get_docker_storage_device",
     "sync_build_image",
     "sync_remove_image",
     "sync_create_container",

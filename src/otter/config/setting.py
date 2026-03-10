@@ -30,12 +30,26 @@ class LLMSettings(BaseSettings):
     retry_base_delay: float = 1.0
 
 
+class DockerSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="DOCKER__",
+        extra="ignore"
+    )
+    cpus: float = 1.0
+    memory: str = "512m"
+    memory_swap: str = "512m"
+    memory_reservation: str = "256m"
+    device_read_bps: str | None = "128m"
+    device_write_bps: str | None = "128m"
+    timeout: int = 10
+
+
 class EnvironmentSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="ENVIRONMENT__", 
         extra="ignore"
     )
-    pass # 先不考虑具体的参数
+    docker: DockerSettings = DockerSettings()
 
 
 _DATASET_DEFAULT_STORE: dict[str, str] = {
@@ -121,6 +135,9 @@ def _build_settings() -> Settings:
         dataset=DatasetSettings(_env_file=env),
         llm=LLMSettings(_env_file=env),
         log=LoggerSettings(_env_file=env),
-        environment=EnvironmentSettings(_env_file=env),
+        environment=EnvironmentSettings(
+            _env_file=env,
+            docker=DockerSettings(_env_file=env),
+        ),
         experiment=ExperimentSettings(_env_file=env),
     )

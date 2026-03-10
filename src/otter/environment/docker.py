@@ -1,10 +1,13 @@
+import asyncio
 import tempfile
 from uuid import uuid4
 from pathlib import Path
 from dataclasses import dataclass, field
 
+from otter.config.setting import get_settings
 from otter.environment.base import BaseExecSpec, BaseEnvironment, ExecutionObservation
 from otter.environment.utils.docker_utils import (
+    get_docker_storage_device,
     build_image,
     remove_image,
     create_container,
@@ -22,19 +25,39 @@ class DockerExecSpec(BaseExecSpec):
 
     由 Dataset 构建，描述一次执行需要做什么。
     """
-    image: str = ""                                      # 镜像 tag
+    image_tag: str = ""                                   # 镜像 tag
     files_in: list[tuple[str, str]] = field(default_factory=list)   # [(文件内容, 容器内绝对路径), ...]
     commands: list[str] = field(default_factory=list)    # 按顺序执行的命令
     files_out: list[tuple[str, Path]] = field(default_factory=list) # [(容器内路径, 本地路径), ...]
-    timeout: int = 10
 
 
 class DockerEnvironment(BaseEnvironment):
 
     @classmethod
-    async def build_image(cls, image_tag: str, dockerfile: Path | str, *, exist_ok: bool = True) -> None:
+    def _container_params(cls) -> dict:
+        """从 DockerSettings 构建 create_container 的参数。"""
+        docker_cfg = get_settings().environment.docker
+        params: dict = {
+            "stdin_open": True,
+            "tty": True,
+            "nano_cpus": int(docker_cfg.cpus * 1e9),
+            "mem_limit": docker_cfg.memory,
+            "memswap_limit": docker_cfg.memory_swap,
+            "mem_reservation": docker_cfg.memory_reservation,
+        }
+        if docker_cfg.device_read_bps or docker_cfg.device_write_bps:
+            device = get_docker_storage_device()
+            if docker_cfg.device_read_bps:
+                params["device_read_bps"] = [{"Path": device, "Rate": docker_cfg.device_read_bps}]
+            if docker_cfg.device_write_bps:
+                params["device_write_bps"] = [{"Path": device, "Rate": docker_cfg.device_write_bps}]
+        return params
+
+    @classmethod
+    async def build_image(cls, image_tag: str, dockerfile: Path | str, *,
+                          exist_ok: bool = True, extra_params: dict | None = None) -> None:
         """构建镜像。"""
-        await build_image(image_tag, dockerfile, exist_ok=exist_ok)
+        await build_image(image_tag, dockerfile, exist_ok=exist_ok, extra_params=extra_params)
 
     @classmethod
     async def remove_image(cls, image_tag: str, *, missing_ok: bool = True) -> None:
@@ -45,10 +68,11 @@ class DockerEnvironment(BaseEnvironment):
     async def execute(cls, spec: DockerExecSpec) -> ExecutionObservation:
         """创建容器 → 注入文件 → 按顺序执行命令 → 导出文件 → 销毁容器。"""
         container_name = f"otter-{uuid4().hex[:8]}"
+        timeout = get_settings().environment.docker.timeout
         try:
             await create_container(
-                spec.image, container_name,
-                extra_params={"stdin_open": True, "tty": True},
+                spec.image_tag, container_name,
+                extra_params=cls._container_params(),
             )
             await start_container(container_name)
 
@@ -63,7 +87,17 @@ class DockerEnvironment(BaseEnvironment):
             # 按顺序执行命令
             last_result = None
             for cmd in spec.commands:
-                last_result = await exec_container(container_name, cmd)
+                try:
+                    last_result = await asyncio.wait_for(
+                        exec_container(container_name, cmd), timeout=timeout,
+                    )
+                except asyncio.TimeoutError:
+                    return ExecutionObservation(
+                        stdout="",
+                        stderr=f"Command timed out after {timeout}s: {cmd}",
+                        returncode=-1,
+                        timed_out=True,
+                    )
                 if last_result.returncode != 0:
                     return ExecutionObservation(
                         stdout=last_result.stdout,
