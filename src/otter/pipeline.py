@@ -83,33 +83,27 @@ async def run(
         async with gen_semaphore:
             logger.info("[%s] processing (turn %d)", ep.eid, ep.total_turns + 1)
 
-            await ds.setup_episode(ep)
+            async with ds.episode_context(ep):
+                # 1. 创建新 Turn
+                ep.next_turn()
 
-            # 1. 创建新 Turn
-            ep.next_turn()
+                # 2. Dataset 准备 input 并构建 LLM 输入
+                llm_input = ds.prepare_input(ep, type(llm_client))
 
-            # 2. Dataset 准备 input 并构建 LLM 输入
-            llm_input = ds.prepare_input(ep, type(llm_client))
+                # 3. LLM 生成
+                response = await llm_client.generate(llm_input)
 
-            # 3. LLM 生成
-            response = await llm_client.generate(llm_input)
+                # 4. Dataset 写 response 并构建 ExecSpec
+                spec = ds.prepare_exec(ep, response, type(env_client))
 
-            # 4. Dataset 写 response 并构建 ExecSpec
-            spec = ds.prepare_exec(ep, response, type(env_client))
+                # 5. Environment 执行
+                observation = await env_client.execute(spec)
 
-            # 5. Environment 执行
-            observation = await env_client.execute(spec)
+                # 6. Dataset 判定
+                await ds.make_judgement(ep, observation)
 
-            # 6. Dataset 写 observation
-            ds.write_observation(ep, observation)
-
-            # 7. Dataset 判定
-            ep.turns[-1].passed = ds.judge(ep, observation)
-
-            # 8. 保存 meta（标记 turn 完成）
-            store.save_meta(ep)
-
-            await ds.teardown_episode(ep)
+                # 7. 保存 meta（标记 turn 完成）
+                store.save_meta(ep)
 
             logger.info("[%s] turn %d completed (passed=%s)",
                         ep.eid, ep.total_turns, ep.turns[-1].passed)
@@ -133,9 +127,6 @@ async def main():
     env_client = create_environment()
     store = create_store()
 
-    await ds.setup(settings.experiment.output_dir)
-    try:
+    async with ds.run_context(settings.experiment.output_dir):
         episodes = await run(ds, llm_client, env_client, store)
         logger.info("done: %d episodes processed", len(episodes))
-    finally:
-        await ds.teardown()
