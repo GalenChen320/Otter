@@ -3,10 +3,11 @@ import tempfile
 from uuid import uuid4
 from pathlib import Path
 from dataclasses import dataclass, field
+from typing import Any
 
 from otter.config.setting import get_settings
 from otter.episode import ExecutionObservation
-from otter.environment.base import BaseExecSpec, BaseEnvironment
+from otter.environment.base import BaseEnvironment
 from otter.environment.utils.docker_utils import (
     get_docker_storage_device,
     build_image,
@@ -21,7 +22,7 @@ from otter.environment.utils.docker_utils import (
 
 
 @dataclass
-class DockerExecSpec(BaseExecSpec):
+class DockerExecSpec:
     """DockerEnvironment 的执行规格。
 
     由 Dataset 构建，描述一次执行需要做什么。
@@ -34,11 +35,10 @@ class DockerExecSpec(BaseExecSpec):
 
 class DockerEnvironment(BaseEnvironment):
 
-    @classmethod
-    def _container_params(cls) -> dict:
-        """从 DockerSettings 构建 create_container 的参数。"""
+    def __init__(self):
         docker_cfg = get_settings().environment.docker
-        params: dict = {
+        self._timeout = docker_cfg.timeout
+        self._container_params: dict = {
             "stdin_open": True,
             "tty": True,
             "nano_cpus": int(docker_cfg.cpus * 1e9),
@@ -49,10 +49,9 @@ class DockerEnvironment(BaseEnvironment):
         if docker_cfg.device_read_bps or docker_cfg.device_write_bps:
             device = get_docker_storage_device()
             if docker_cfg.device_read_bps:
-                params["device_read_bps"] = [{"Path": device, "Rate": docker_cfg.device_read_bps}]
+                self._container_params["device_read_bps"] = [{"Path": device, "Rate": docker_cfg.device_read_bps}]
             if docker_cfg.device_write_bps:
-                params["device_write_bps"] = [{"Path": device, "Rate": docker_cfg.device_write_bps}]
-        return params
+                self._container_params["device_write_bps"] = [{"Path": device, "Rate": docker_cfg.device_write_bps}]
 
     @classmethod
     async def build_image(cls, image_tag: str, dockerfile: Path | str, *,
@@ -65,15 +64,14 @@ class DockerEnvironment(BaseEnvironment):
         """删除镜像。"""
         await remove_image(image_tag, missing_ok=missing_ok)
 
-    @classmethod
-    async def execute(cls, spec: DockerExecSpec) -> ExecutionObservation:
+    async def execute(self, exec_input: Any) -> ExecutionObservation:
         """创建容器 → 注入文件 → 按顺序执行命令 → 导出文件 → 销毁容器。"""
+        spec: DockerExecSpec = exec_input
         container_name = f"otter-{uuid4().hex[:8]}"
-        timeout = get_settings().environment.docker.timeout
         try:
             await create_container(
                 spec.image_tag, container_name,
-                extra_params=cls._container_params(),
+                extra_params=self._container_params,
             )
             await start_container(container_name)
 
@@ -90,12 +88,12 @@ class DockerEnvironment(BaseEnvironment):
             for cmd in spec.commands:
                 try:
                     last_result = await asyncio.wait_for(
-                        exec_container(container_name, cmd), timeout=timeout,
+                        exec_container(container_name, cmd), timeout=self._timeout,
                     )
                 except asyncio.TimeoutError:
                     return ExecutionObservation(
                         stdout="",
-                        stderr=f"Command timed out after {timeout}s: {cmd}",
+                        stderr=f"Command timed out after {self._timeout}s: {cmd}",
                         returncode=-1,
                         timed_out=True,
                     )
