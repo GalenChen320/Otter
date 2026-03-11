@@ -1,3 +1,5 @@
+from typing import Any
+
 from openai import AsyncOpenAI
 from .base import BaseLLM
 
@@ -16,10 +18,10 @@ class OpenAICompatibleLLM(BaseLLM):
             base_url=settings.llm.base_url,
         )
 
-    async def _generate(self, messages: list[dict]) -> str:
+    async def _generate(self, llm_input: Any) -> Any:
         settings = get_settings()
         response = await self.client.chat.completions.create(
             model=settings.llm.model,
-            messages=messages,
+            messages=llm_input,
         )
         return response.choices[0].message.content

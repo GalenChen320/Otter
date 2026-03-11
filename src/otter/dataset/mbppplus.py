@@ -78,17 +78,18 @@ class MBPPPlusDataset(BaseDataset):
             return match.group(1).strip()
         return response.strip()
 
-    def write_input(self, episode: Episode) -> None:
+    def prepare_input(self, episode: Episode, llm_type: type) -> list[dict]:
+        if llm_type not in self.supported_llms:
+            raise TypeError(f"MBPPPlusDataset does not support LLM type: {llm_type.__name__}")
+
         turn = episode.turns[-1]
+
+        # 写入 input 文件
         prompt = self._format_prompt(episode.task_id)
         (turn.input_path / "prompt.txt").write_text(prompt, encoding="utf-8")
 
-    def prepare_llm_input(self, episode: Episode) -> list[dict]:
-        turn = episode.turns[-1]
-        prompt = (turn.input_path / "prompt.txt").read_text(encoding="utf-8")
+        # 构建 LLM 输入
         messages = [{"role": "user", "content": prompt}]
-
-        # 历史 turn 的 response + feedback
         for prev_turn in episode.turns[:-1]:
             response_file = prev_turn.response_path / "response.txt"
             prev_response = response_file.read_text(encoding="utf-8")
@@ -97,15 +98,17 @@ class MBPPPlusDataset(BaseDataset):
 
         return messages
 
-    def write_response(self, episode: Episode, response: str) -> None:
+    def prepare_exec(self, episode: Episode, response: str, env_type: type) -> DockerExecSpec:
+        if env_type not in self.supported_environments:
+            raise TypeError(f"MBPPPlusDataset does not support environment type: {env_type.__name__}")
+
         turn = episode.turns[-1]
+
+        # 写入 response 文件
         (turn.response_path / "response.txt").write_text(response, encoding="utf-8")
 
-    def to_exec_spec(self, episode: Episode) -> DockerExecSpec:
-        turn = episode.turns[-1]
-        response = (turn.response_path / "response.txt").read_text(encoding="utf-8")
+        # 构建 ExecSpec
         code = self._extract_code(response)
-
         problem = self._problems[episode.task_id]
         imports = "\n".join(problem.extra_imports)
         full_code = f"{imports}\n\n{code}\n\n{problem.official_tests}"

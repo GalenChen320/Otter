@@ -49,6 +49,7 @@ class EnvironmentSettings(BaseSettings):
         env_prefix="ENVIRONMENT__", 
         extra="ignore"
     )
+    environment_type: Literal["docker"] = "docker"
     docker: DockerSettings = DockerSettings()
 
 

@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Any
 
 from otter.episode import Episode, ExecutionObservation
-from otter.environment.base import BaseExecSpec
 
 
 class BaseDataset(ABC):
@@ -41,23 +40,13 @@ class BaseDataset(ABC):
     # ── Pipeline 编排接口 ──
 
     @abstractmethod
-    def write_input(self, episode: Episode) -> None:
-        """往 episode.turns[-1].input_path 写入输入文件。"""
+    def prepare_input(self, episode: Episode, llm_type: type) -> Any:
+        """往 episode.turns[-1].input_path 写入输入文件，并根据 llm_type 返回 LLM 能消费的格式。"""
         pass
 
     @abstractmethod
-    def prepare_llm_input(self, episode: Episode) -> Any:
-        """将当前 episode 的输入转化为 LLM 能消费的格式。"""
-        pass
-
-    @abstractmethod
-    def write_response(self, episode: Episode, response: str) -> None:
-        """往 episode.turns[-1].response_path 写入响应文件。"""
-        pass
-
-    @abstractmethod
-    def to_exec_spec(self, episode: Episode) -> BaseExecSpec:
-        """从当前 turn 构建 Environment 的执行规格。"""
+    def prepare_exec(self, episode: Episode, response: Any, env_type: type) -> Any:
+        """往 episode.turns[-1].response_path 写入响应文件，并根据 env_type 返回执行规格。"""
         pass
 
     @abstractmethod
