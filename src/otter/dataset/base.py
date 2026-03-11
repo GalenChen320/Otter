@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from otter.episode import Episode, ExecutionObservation
+from otter.episode import Episode
 
 
 class BaseDataset(ABC):
@@ -29,6 +30,15 @@ class BaseDataset(ABC):
         """Dataset 级别资源回收，整个评测结束后调用一次。"""
         pass
 
+    @asynccontextmanager
+    async def run_context(self, output_dir: Path):
+        """Dataset 级别上下文管理器，包裹 setup/teardown。"""
+        await self.setup(output_dir)
+        try:
+            yield
+        finally:
+            await self.teardown()
+
     async def setup_episode(self, episode: Episode) -> None:
         """Episode 级别初始化，每道题开始前调用。"""
         pass
@@ -36,6 +46,15 @@ class BaseDataset(ABC):
     async def teardown_episode(self, episode: Episode) -> None:
         """Episode 级别资源回收，每道题结束后调用。"""
         pass
+
+    @asynccontextmanager
+    async def episode_context(self, episode: Episode):
+        """Episode 级别上下文管理器，包裹 setup/teardown。"""
+        await self.setup_episode(episode)
+        try:
+            yield episode
+        finally:
+            await self.teardown_episode(episode)
 
     # ── Pipeline 编排接口 ──
 
@@ -50,11 +69,6 @@ class BaseDataset(ABC):
         pass
 
     @abstractmethod
-    def write_observation(self, episode: Episode, observation: ExecutionObservation) -> None:
-        """往 episode.turns[-1].observation_path 写入观测文件。"""
-        pass
-
-    @abstractmethod
-    def judge(self, episode: Episode, observation: ExecutionObservation) -> bool:
-        """判定当前 turn 是否通过。"""
+    async def make_judgement(self, episode: Episode, observation: Any) -> None:
+        """写入观测文件，判定是否通过，并更新 episode 状态。"""
         pass

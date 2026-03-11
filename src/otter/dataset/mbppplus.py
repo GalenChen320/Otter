@@ -119,8 +119,10 @@ class MBPPPlusDataset(BaseDataset):
             commands=["python /tmp/solution.py"],
         )
 
-    def write_observation(self, episode: Episode, observation: ExecutionObservation) -> None:
+    async def make_judgement(self, episode: Episode, observation: ExecutionObservation) -> None:
         turn = episode.turns[-1]
+
+        # 写入 observation 文件
         obs_dict = {
             "stdout": observation.stdout,
             "stderr": observation.stderr,
@@ -131,5 +133,5 @@ class MBPPPlusDataset(BaseDataset):
             json.dumps(obs_dict, ensure_ascii=False, indent=2), encoding="utf-8",
         )
 
-    def judge(self, episode: Episode, observation: ExecutionObservation) -> bool:
-        return observation.returncode == 0 and not observation.timed_out
+        # 判定
+        turn.passed = observation.returncode == 0 and not observation.timed_out
