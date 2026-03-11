@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Any
 
 from otter.episode import Episode, ExecutionObservation
 from otter.environment.base import BaseExecSpec
@@ -7,6 +8,8 @@ from otter.environment.base import BaseExecSpec
 
 class BaseDataset(ABC):
     base_dir: Path | None = None
+    supported_llms: list[type] = []
+    supported_environments: list[type] = []
 
     @abstractmethod
     def load(self) -> None:
@@ -43,8 +46,8 @@ class BaseDataset(ABC):
         pass
 
     @abstractmethod
-    def make_messages(self, episode: Episode) -> list[dict]:
-        """构建 LLM messages。"""
+    def prepare_llm_input(self, episode: Episode) -> Any:
+        """将当前 episode 的输入转化为 LLM 能消费的格式。"""
         pass
 
     @abstractmethod

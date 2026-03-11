@@ -7,6 +7,7 @@ from otter.dataset.base import BaseDataset
 from otter.config.setting import get_settings
 from otter.episode import Episode, ExecutionObservation
 from otter.environment.docker import DockerEnvironment, DockerExecSpec
+from otter.llm.openai_compatible import OpenAICompatibleLLM
 from otter.logger import get_logger
 
 
@@ -23,6 +24,8 @@ class MBPPPlusProblem:
 class MBPPPlusDataset(BaseDataset):
 
     IMAGE_TAG = "python:3.11-slim"
+    supported_llms = [OpenAICompatibleLLM]
+    supported_environments = [DockerEnvironment]
 
     def load(self):
         settings = get_settings()
@@ -80,7 +83,7 @@ class MBPPPlusDataset(BaseDataset):
         prompt = self._format_prompt(episode.task_id)
         (turn.input_path / "prompt.txt").write_text(prompt, encoding="utf-8")
 
-    def make_messages(self, episode: Episode) -> list[dict]:
+    def prepare_llm_input(self, episode: Episode) -> list[dict]:
         turn = episode.turns[-1]
         prompt = (turn.input_path / "prompt.txt").read_text(encoding="utf-8")
         messages = [{"role": "user", "content": prompt}]

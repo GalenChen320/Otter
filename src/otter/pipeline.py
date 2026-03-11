@@ -81,11 +81,11 @@ async def run(
             # 2. Dataset 写 input
             ds.write_input(ep)
 
-            # 3. Dataset 构建 messages
-            messages = ds.make_messages(ep)
+            # 3. Dataset 构建 LLM 输入
+            llm_input = ds.prepare_llm_input(ep)
 
             # 4. LLM 生成
-            response = await llm_client.generate(messages, eid=ep.eid)
+            response = await llm_client.generate(llm_input, eid=ep.eid)
 
             # 5. Dataset 写 response
             ds.write_response(ep, response)
