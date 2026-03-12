@@ -31,9 +31,8 @@ class ExecManifest(BaseManifest):
 @dataclass
 class ObservationManifest(BaseManifest):
     """观测侧的句柄。Environment 写入，Dataset 读取。"""
-    base_path: Path | None = None
-    stdout_file: str | None = None
-    stderr_file: str | None = None
+    stdout_file: Path | None = None
+    stderr_file: Path | None = None
     returncode: int | None = None
     timed_out: bool | None = None
 
