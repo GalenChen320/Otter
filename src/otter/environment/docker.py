@@ -74,8 +74,7 @@ class DockerEnvironment(BaseEnvironment):
 
             # 注入脚本文件
             if manifest.script_file:
-                script_path = manifest.base_path / manifest.script_file
-                await copy_to_container(container_name, script_path, "/tmp")
+                await copy_to_container(container_name, manifest.script_file, "/tmp")
 
             # 按顺序执行命令
             last_result = None

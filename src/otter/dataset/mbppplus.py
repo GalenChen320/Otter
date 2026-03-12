@@ -78,31 +78,20 @@ class MBPPPlusDataset(BaseDataset):
     def prepare_llm_input(self, episode: Episode) -> None:
         turn = episode.turns[-1]
 
-        # 写入 prompt 文件
-        prompt = self._format_prompt(episode.task_id)
-        (turn.input_path / "prompt.txt").write_text(prompt, encoding="utf-8")
+        # 第一轮：写题目 prompt；后续轮次：写 feedback
+        if len(episode.turns) == 1:
+            prompt = self._format_prompt(episode.task_id)
+        else:
+            prompt = "Your code is incorrect. Please try again."
 
-        # 多轮：拼接历史 response 和 feedback
-        messages = [{"role": "user", "content": prompt}]
-        for prev_turn in episode.turns[:-1]:
-            response_file = prev_turn.response_path / "response.txt"
-            prev_response = response_file.read_text(encoding="utf-8")
-            messages.append({"role": "assistant", "content": prev_response})
-            messages.append({"role": "user", "content": "Your code is incorrect. Please try again."})
-
-        # 写入 messages 文件
-        (turn.input_path / "messages.json").write_text(
-            json.dumps(messages, ensure_ascii=False, indent=2), encoding="utf-8",
-        )
+        prompt_file = turn.input_path / "prompt.txt"
+        prompt_file.write_text(prompt, encoding="utf-8")
 
         # 写入 manifest 并设置句柄
-        manifest = InputManifest(
-            base_path=turn.input_path,
-            messages_file="messages.json",
-        )
-        manifest_dict = {"messages_file": manifest.messages_file}
+        manifest = InputManifest(prompt_file=prompt_file)
         (turn.input_path / "manifest.json").write_text(
-            json.dumps(manifest_dict, ensure_ascii=False, indent=2), encoding="utf-8",
+            json.dumps({"prompt_file": str(prompt_file)}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
         )
         turn.input_manifest = manifest
 
@@ -114,8 +103,7 @@ class MBPPPlusDataset(BaseDataset):
             raise ValueError("MBPPPlusDataset requires 'response_file' in ResponseManifest")
 
         # 从 response manifest 读取 response
-        response_path = response_manifest.base_path / response_manifest.response_file
-        response = response_path.read_text(encoding="utf-8")
+        response = response_manifest.response_file.read_text(encoding="utf-8")
 
         # 提取代码，拼接测试，写入脚本文件
         code = self._extract_code(response)
@@ -123,12 +111,11 @@ class MBPPPlusDataset(BaseDataset):
         imports = "\n".join(problem.extra_imports)
         full_code = f"{imports}\n\n{code}\n\n{problem.official_tests}"
 
-        script_file = "solution.py"
-        (turn.exec_path / script_file).write_text(full_code, encoding="utf-8")
+        script_file = turn.exec_path / "solution.py"
+        script_file.write_text(full_code, encoding="utf-8")
 
         # 写入 manifest 并设置句柄
         manifest = ExecManifest(
-            base_path=turn.exec_path,
             image_tag=self.IMAGE_TAG,
             script_file=script_file,
             commands=["python /tmp/solution.py"],
@@ -136,7 +123,7 @@ class MBPPPlusDataset(BaseDataset):
         (turn.exec_path / "exec_manifest.json").write_text(
             json.dumps({
                 "image_tag": manifest.image_tag,
-                "script_file": manifest.script_file,
+                "script_file": str(manifest.script_file),
                 "commands": manifest.commands,
             }, ensure_ascii=False, indent=2),
             encoding="utf-8",
