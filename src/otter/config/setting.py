@@ -24,7 +24,7 @@ class LLMSettings(BaseSettings):
     response_format: Literal[
         "openai_compatible"
     ] = "openai_compatible"
-    concurrency: int = 10
+    concurrency: int = 1
     samples_per_problem: int = 1
     max_retries: int = 3
     retry_base_delay: float = 1.0

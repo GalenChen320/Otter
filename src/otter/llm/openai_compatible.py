@@ -23,11 +23,20 @@ class OpenAICompatibleLLM(BaseLLM):
         turn = episode.turns[-1]
         input_manifest = turn.input_manifest
 
-        if not input_manifest or not input_manifest.messages_file:
-            raise ValueError("OpenAICompatibleLLM requires 'messages_file' in InputManifest")
+        if not input_manifest or not input_manifest.prompt_file:
+            raise ValueError("OpenAICompatibleLLM requires 'prompt_file' in InputManifest")
 
-        messages_path = input_manifest.base_path / input_manifest.messages_file
-        messages = json.loads(messages_path.read_text(encoding="utf-8"))
+        # 遍历所有 Turn 构建多轮 messages
+        messages = []
+        for t in episode.turns:
+            # 每轮的 prompt（第一轮是题目，后续是 feedback）
+            prompt = t.input_manifest.prompt_file.read_text(encoding="utf-8")
+            messages.append({"role": "user", "content": prompt})
+
+            # 历史 Turn 有 response，当前 Turn 还没有
+            if t is not turn:
+                response_file = t.response_path / "response.txt"
+                messages.append({"role": "assistant", "content": response_file.read_text(encoding="utf-8")})
 
         settings = get_settings()
         response = await self.client.chat.completions.create(
@@ -37,17 +46,13 @@ class OpenAICompatibleLLM(BaseLLM):
         content = response.choices[0].message.content
 
         # 写 response 文件
-        response_dir = turn.response_path
-        response_file = "response.txt"
-        (response_dir / response_file).write_text(content, encoding="utf-8")
+        response_file = turn.response_path / "response.txt"
+        response_file.write_text(content, encoding="utf-8")
 
         # 写 manifest.json
-        manifest = ResponseManifest(
-            base_path=response_dir,
-            response_file=response_file,
-        )
-        (response_dir / "manifest.json").write_text(
-            json.dumps({"response_file": response_file}),
+        manifest = ResponseManifest(response_file=response_file)
+        (turn.response_path / "manifest.json").write_text(
+            json.dumps({"response_file": str(response_file)}),
             encoding="utf-8",
         )
         turn.response_manifest = manifest
