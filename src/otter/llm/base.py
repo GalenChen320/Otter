@@ -1,23 +1,22 @@
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Any
 
 from otter.config.setting import get_settings
-from otter.episode import InputManifest
+from otter.episode import Episode
 from otter.logger import get_logger
 
 
 class BaseLLM(ABC):
 
-    async def generate(self, input_manifest: InputManifest) -> Any:
+    async def generate(self, episode: Episode) -> None:
         settings = get_settings()
         logger = get_logger()
         last_exc: Exception | None = None
         for attempt in range(1, settings.llm.max_retries + 1):
             try:
-                result = await self._generate(input_manifest)
+                await self._generate(episode)
                 logger.info("attempt %d/%d succeeded", attempt, settings.llm.max_retries)
-                return result
+                return
             except Exception as e:
                 last_exc = e
                 logger.warning(
@@ -31,5 +30,5 @@ class BaseLLM(ABC):
         raise last_exc
 
     @abstractmethod
-    async def _generate(self, input_manifest: InputManifest) -> Any:
+    async def _generate(self, episode: Episode) -> None:
         pass

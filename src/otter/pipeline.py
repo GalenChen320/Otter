@@ -87,27 +87,20 @@ async def run(
                 # 1. 创建新 Turn
                 ep.next_turn()
 
-                # Step1. 我希望这里准备的输入是跟llm_client的类别无关，
-                # 特别的，prepare_input会在input文件夹里面写一个json文件和，其他文件也烦在文件夹里。
-                # 不同的llm_client，他们会需要不同的字段，比如对于一般的mbppplus和目前有的llmclient来说，json里面只需要一个messages_file字段/
-                # ds.prepare_input(ep)
-
-                # Step2. 这里
                 # 2. Dataset 准备 input（写文件 + 设置 turn.input_manifest）
                 ds.prepare_input(ep)
 
-                # 3. LLM 生成
-                turn = ep.turns[-1]
-                response = await llm_client.generate(turn.input_manifest)
+                # 3. LLM 生成（读 input_manifest，写 response 文件 + 设置 turn.response_manifest）
+                await llm_client.generate(ep)
 
-                # 4. Dataset 写 response 并构建 ExecSpec
-                spec = ds.prepare_exec(ep, response, type(env_client))
+                # 4. Dataset 构建执行规格（读 response_manifest，写执行文件 + 设置 turn.exec_manifest）
+                ds.prepare_exec(ep)
 
-                # 5. Environment 执行
-                observation = await env_client.execute(spec)
+                # 5. Environment 执行（读 exec_manifest，写 observation 文件 + 设置 turn.observation_manifest）
+                await env_client.execute(ep)
 
-                # 6. Dataset 判定
-                await ds.make_judgement(ep, observation)
+                # 6. Dataset 判定（读 observation_manifest，更新 turn.passed）
+                await ds.make_judgement(ep)
 
                 # 7. 保存 meta（标记 turn 完成）
                 store.save_meta(ep)

@@ -1,15 +1,12 @@
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
 
 from otter.episode import Episode
 
 
 class BaseDataset(ABC):
     base_dir: Path | None = None
-    supported_llms: list[type] = []
-    supported_environments: list[type] = []
 
     @abstractmethod
     def load(self) -> None:
@@ -60,15 +57,15 @@ class BaseDataset(ABC):
 
     @abstractmethod
     def prepare_input(self, episode: Episode) -> None:
-        """往 episode.turns[-1].input_path 写入输入文件，并设置 turn.input_manifest。"""
+        """写入 input 文件，设置 turn.input_manifest。"""
         pass
 
     @abstractmethod
-    def prepare_exec(self, episode: Episode, response: Any, env_type: type) -> Any:
-        """往 episode.turns[-1].response_path 写入响应文件，并根据 env_type 返回执行规格。"""
+    def prepare_exec(self, episode: Episode) -> None:
+        """从 turn.response_manifest 读取响应，写入执行文件，设置 turn.exec_manifest。"""
         pass
 
     @abstractmethod
-    async def make_judgement(self, episode: Episode, observation: Any) -> None:
-        """写入观测文件，判定是否通过，并更新 episode 状态。"""
+    async def make_judgement(self, episode: Episode) -> None:
+        """从 turn.observation_manifest 读取观测，判定是否通过，更新 turn.passed。"""
         pass

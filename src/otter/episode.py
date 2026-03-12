@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass
@@ -11,13 +10,30 @@ class InputManifest:
 
 
 @dataclass
-class ExecutionObservation:
-    """环境执行后的原始观测结果。
-    """
-    stdout: str = ""
-    stderr: str = ""
-    returncode: int = 0
-    timed_out: bool = False
+class ResponseManifest:
+    """LLM 输出侧的句柄。LLM 写入，Dataset 读取。"""
+    base_path: Path | None = None
+    response_file: str | None = None
+
+
+@dataclass
+class ExecManifest:
+    """执行侧的句柄。Dataset 写入，Environment 读取。"""
+    base_path: Path | None = None
+    image_tag: str | None = None
+    script_file: str | None = None
+    commands: list[str] | None = None
+    timeout: int | None = None
+
+
+@dataclass
+class ObservationManifest:
+    """观测侧的句柄。Environment 写入，Dataset 读取。"""
+    base_path: Path | None = None
+    stdout_file: str | None = None
+    stderr_file: str | None = None
+    returncode: int | None = None
+    timed_out: bool | None = None
 
 
 @dataclass
@@ -27,6 +43,9 @@ class Turn:
     observation_path: Path | None = None
     passed: bool | None = None
     input_manifest: InputManifest | None = None
+    response_manifest: ResponseManifest | None = None
+    exec_manifest: ExecManifest | None = None
+    observation_manifest: ObservationManifest | None = None
 
 
 @dataclass
