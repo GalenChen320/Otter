@@ -81,16 +81,16 @@ async def run(
                 # 1. 创建新 Turn
                 ep.next_turn()
 
-                # 2. Dataset 准备 LLM 输入（写文件 + 设置 turn.input_manifest）
+                # 2. Dataset 准备 LLM 输入（写文件 + 设置 turn.llm_input_manifest）
                 ds.prepare_llm_input(ep)
 
-                # 3. LLM 生成（读 input_manifest，写 response 文件 + 设置 turn.response_manifest）
+                # 3. LLM 生成（读 llm_input_manifest，写 response 文件 + 设置 turn.response_manifest）
                 await llm_client.generate(ep)
 
-                # 4. Dataset 构建执行规格（读 response_manifest，写执行文件 + 设置 turn.exec_manifest）
+                # 4. Dataset 构建执行规格（读 response_manifest，写执行文件 + 设置 turn.env_input_manifest）
                 ds.prepare_env_input(ep)
 
-                # 5. Environment 执行（读 exec_manifest，写 observation 文件 + 设置 turn.observation_manifest）
+                # 5. Environment 执行（读 env_input_manifest，写 observation 文件 + 设置 turn.observation_manifest）
                 await env_client.execute(ep)
 
                 # 6. Dataset 判定（读 observation_manifest，更新 turn.passed，保存 meta）

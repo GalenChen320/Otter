@@ -57,12 +57,12 @@ class BaseDataset(ABC):
 
     @abstractmethod
     def prepare_llm_input(self, episode: Episode) -> None:
-        """写入 input 文件，设置 turn.input_manifest。"""
+        """写入 LLM 输入文件，设置 turn.llm_input_manifest。"""
         pass
 
     @abstractmethod
     def prepare_env_input(self, episode: Episode) -> None:
-        """从 turn.response_manifest 读取响应，写入执行文件，设置 turn.exec_manifest。"""
+        """从 turn.response_manifest 读取响应，写入执行文件，设置 turn.env_input_manifest。"""
         pass
 
     @abstractmethod
