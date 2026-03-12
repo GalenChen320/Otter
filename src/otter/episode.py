@@ -1,5 +1,13 @@
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
+
+
+@dataclass
+class InputManifest:
+    """LLM 输入侧的句柄。Dataset 写入，LLM 读取。"""
+    base_path: Path | None = None
+    messages_file: str | None = None
 
 
 @dataclass
@@ -18,6 +26,7 @@ class Turn:
     response_path: Path | None = None
     observation_path: Path | None = None
     passed: bool | None = None
+    input_manifest: InputManifest | None = None
 
 
 @dataclass

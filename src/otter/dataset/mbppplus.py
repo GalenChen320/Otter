@@ -5,7 +5,7 @@ from datasets import load_dataset
 
 from otter.dataset.base import BaseDataset
 from otter.config.setting import get_settings
-from otter.episode import Episode, ExecutionObservation
+from otter.episode import Episode, ExecutionObservation, InputManifest
 from otter.environment.docker import DockerEnvironment, DockerExecSpec
 from otter.llm.openai_compatible import OpenAICompatibleLLM
 from otter.logger import get_logger
@@ -78,17 +78,14 @@ class MBPPPlusDataset(BaseDataset):
             return match.group(1).strip()
         return response.strip()
 
-    def prepare_input(self, episode: Episode, llm_type: type) -> list[dict]:
-        if llm_type not in self.supported_llms:
-            raise TypeError(f"MBPPPlusDataset does not support LLM type: {llm_type.__name__}")
-
+    def prepare_input(self, episode: Episode) -> None:
         turn = episode.turns[-1]
 
-        # 写入 input 文件
+        # 写入 prompt 文件
         prompt = self._format_prompt(episode.task_id)
         (turn.input_path / "prompt.txt").write_text(prompt, encoding="utf-8")
 
-        # 构建 LLM 输入
+        # 多轮：拼接历史 response 和 feedback
         messages = [{"role": "user", "content": prompt}]
         for prev_turn in episode.turns[:-1]:
             response_file = prev_turn.response_path / "response.txt"
@@ -96,7 +93,21 @@ class MBPPPlusDataset(BaseDataset):
             messages.append({"role": "assistant", "content": prev_response})
             messages.append({"role": "user", "content": "Your code is incorrect. Please try again."})
 
-        return messages
+        # 写入 messages 文件
+        (turn.input_path / "messages.json").write_text(
+            json.dumps(messages, ensure_ascii=False, indent=2), encoding="utf-8",
+        )
+
+        # 写入 manifest 并设置句柄
+        manifest = InputManifest(
+            base_path=turn.input_path,
+            messages_file="messages.json",
+        )
+        manifest_dict = {"messages_file": manifest.messages_file}
+        (turn.input_path / "manifest.json").write_text(
+            json.dumps(manifest_dict, ensure_ascii=False, indent=2), encoding="utf-8",
+        )
+        turn.input_manifest = manifest
 
     def prepare_exec(self, episode: Episode, response: str, env_type: type) -> DockerExecSpec:
         if env_type not in self.supported_environments:
