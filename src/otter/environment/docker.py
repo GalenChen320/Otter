@@ -22,6 +22,15 @@ from otter.environment.utils.docker_utils import (
 
 class DockerEnvironment(BaseEnvironment):
 
+    @staticmethod
+    def _parse_size(value: str) -> int:
+        """将人类可读的大小字符串转换为字节数，如 '128m' → 134217728。"""
+        units = {"b": 1, "k": 1024, "m": 1024**2, "g": 1024**3, "t": 1024**4}
+        value = value.strip().lower()
+        if value[-1] in units:
+            return int(float(value[:-1]) * units[value[-1]])
+        return int(value)
+
     def __init__(self):
         docker_cfg = get_settings().environment.docker
         self._timeout = docker_cfg.timeout
@@ -36,9 +45,9 @@ class DockerEnvironment(BaseEnvironment):
         if docker_cfg.device_read_bps or docker_cfg.device_write_bps:
             device = get_docker_storage_device()
             if docker_cfg.device_read_bps:
-                self._container_params["device_read_bps"] = [{"Path": device, "Rate": docker_cfg.device_read_bps}]
+                self._container_params["device_read_bps"] = [{"Path": device, "Rate": self._parse_size(docker_cfg.device_read_bps)}]
             if docker_cfg.device_write_bps:
-                self._container_params["device_write_bps"] = [{"Path": device, "Rate": docker_cfg.device_write_bps}]
+                self._container_params["device_write_bps"] = [{"Path": device, "Rate": self._parse_size(docker_cfg.device_write_bps)}]
 
     @classmethod
     async def build_image(cls, image_tag: str, dockerfile: Path | str, *,
@@ -108,14 +117,13 @@ class DockerEnvironment(BaseEnvironment):
     @staticmethod
     def _write_observation(turn, obs_dir: Path, stdout: str, stderr: str, returncode: int, timed_out: bool) -> None:
         """写入 observation 文件和 manifest。"""
-        stdout_file = "stdout.txt"
-        stderr_file = "stderr.txt"
+        stdout_file = obs_dir / "stdout.txt"
+        stderr_file = obs_dir / "stderr.txt"
 
-        (obs_dir / stdout_file).write_text(stdout, encoding="utf-8")
-        (obs_dir / stderr_file).write_text(stderr, encoding="utf-8")
+        stdout_file.write_text(stdout, encoding="utf-8")
+        stderr_file.write_text(stderr, encoding="utf-8")
 
         manifest = ObservationManifest(
-            base_path=obs_dir,
             stdout_file=stdout_file,
             stderr_file=stderr_file,
             returncode=returncode,
@@ -123,8 +131,8 @@ class DockerEnvironment(BaseEnvironment):
         )
         (obs_dir / "manifest.json").write_text(
             json.dumps({
-                "stdout_file": stdout_file,
-                "stderr_file": stderr_file,
+                "stdout_file": str(stdout_file),
+                "stderr_file": str(stderr_file),
                 "returncode": returncode,
                 "timed_out": timed_out,
             }, ensure_ascii=False, indent=2),
