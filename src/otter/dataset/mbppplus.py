@@ -97,13 +97,13 @@ class MBPPPlusDataset(BaseDataset):
 
     def prepare_env_input(self, episode: Episode) -> None:
         turn = episode.turns[-1]
-        response_manifest = turn.response_manifest
+        llm_output_manifest = turn.llm_output_manifest
 
-        if not response_manifest or not response_manifest.response_file:
-            raise ValueError("MBPPPlusDataset requires 'response_file' in ResponseManifest")
+        if not llm_output_manifest or not llm_output_manifest.llm_output_file:
+            raise ValueError("MBPPPlusDataset requires 'llm_output_file' in LLMOutputManifest")
 
-        # 从 response manifest 读取 response
-        response = response_manifest.response_file.read_text(encoding="utf-8")
+        # 从 llm_output manifest 读取 response
+        response = llm_output_manifest.llm_output_file.read_text(encoding="utf-8")
 
         # 提取代码，拼接测试，写入脚本文件
         code = self._extract_code(response)
@@ -132,9 +132,9 @@ class MBPPPlusDataset(BaseDataset):
 
     async def _judge(self, episode: Episode) -> None:
         turn = episode.turns[-1]
-        obs = turn.observation_manifest
+        env_output = turn.env_output_manifest
 
-        if not obs:
-            raise ValueError("MBPPPlusDataset requires ObservationManifest")
+        if not env_output:
+            raise ValueError("MBPPPlusDataset requires EnvOutputManifest")
 
-        turn.passed = obs.returncode == 0 and not obs.timed_out
+        turn.passed = env_output.returncode == 0 and not env_output.timed_out

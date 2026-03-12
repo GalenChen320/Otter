@@ -21,7 +21,7 @@ class LLMSettings(BaseSettings):
     api_key: str
     base_url: str
     model: str
-    response_format: Literal[
+    llm_type: Literal[
         "openai_compatible"
     ] = "openai_compatible"
     concurrency: int = 1

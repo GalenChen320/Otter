@@ -14,9 +14,9 @@ class LLMInputManifest(BaseManifest):
 
 
 @dataclass
-class ResponseManifest(BaseManifest):
+class LLMOutputManifest(BaseManifest):
     """LLM 输出侧的句柄。LLM 写入，Dataset 读取。"""
-    response_file: Path | None = None
+    llm_output_file: Path | None = None
 
 
 @dataclass
@@ -29,8 +29,8 @@ class EnvInputManifest(BaseManifest):
 
 
 @dataclass
-class ObservationManifest(BaseManifest):
-    """观测侧的句柄。Environment 写入，Dataset 读取。"""
+class EnvOutputManifest(BaseManifest):
+    """环境输出侧的句柄。Environment 写入，Dataset 读取。"""
     stdout_file: Path | None = None
     stderr_file: Path | None = None
     returncode: int | None = None
@@ -43,14 +43,14 @@ META_FILENAME = "meta.json"
 @dataclass
 class Turn:
     llm_input_path: Path | None = None
-    response_path: Path | None = None
+    llm_output_path: Path | None = None
     env_input_path: Path | None = None
-    observation_path: Path | None = None
+    env_output_path: Path | None = None
     passed: bool | None = None
     llm_input_manifest: LLMInputManifest | None = None
-    response_manifest: ResponseManifest | None = None
+    llm_output_manifest: LLMOutputManifest | None = None
     env_input_manifest: EnvInputManifest | None = None
-    observation_manifest: ObservationManifest | None = None
+    env_output_manifest: EnvOutputManifest | None = None
 
     @property
     def turn_dir(self) -> Path | None:
@@ -99,20 +99,20 @@ class Episode:
         """创建下一个 Turn，建立目录结构，append 到 turns。"""
         turn_dir = self.base_dir / f"turn_{len(self.turns) + 1}"
         llm_input_dir = turn_dir / "llm_input"
-        response_dir = turn_dir / "response"
+        llm_output_dir = turn_dir / "llm_output"
         env_input_dir = turn_dir / "env_input"
-        observation_dir = turn_dir / "observation"
+        env_output_dir = turn_dir / "env_output"
 
         llm_input_dir.mkdir(parents=True, exist_ok=True)
-        response_dir.mkdir(parents=True, exist_ok=True)
+        llm_output_dir.mkdir(parents=True, exist_ok=True)
         env_input_dir.mkdir(parents=True, exist_ok=True)
-        observation_dir.mkdir(parents=True, exist_ok=True)
+        env_output_dir.mkdir(parents=True, exist_ok=True)
 
         self.turns.append(Turn(
             llm_input_path=llm_input_dir,
-            response_path=response_dir,
+            llm_output_path=llm_output_dir,
             env_input_path=env_input_dir,
-            observation_path=observation_dir,
+            env_output_path=env_output_dir,
         ))
 
     @classmethod
@@ -146,17 +146,17 @@ class Episode:
                     continue
 
                 llm_input_dir = turn_dir / "llm_input"
-                response_dir = turn_dir / "response"
+                llm_output_dir = turn_dir / "llm_output"
                 env_input_dir = turn_dir / "env_input"
-                observation_dir = turn_dir / "observation"
+                env_output_dir = turn_dir / "env_output"
 
                 meta = json.loads(meta_path.read_text(encoding="utf-8"))
 
                 turns.append(Turn(
                     llm_input_path=llm_input_dir if llm_input_dir.exists() else None,
-                    response_path=response_dir if response_dir.exists() else None,
+                    llm_output_path=llm_output_dir if llm_output_dir.exists() else None,
                     env_input_path=env_input_dir if env_input_dir.exists() else None,
-                    observation_path=observation_dir if observation_dir.exists() else None,
+                    env_output_path=env_output_dir if env_output_dir.exists() else None,
                     passed=meta.get("passed"),
                 ))
 
