@@ -143,7 +143,7 @@ class MBPPPlusDataset(BaseDataset):
         )
         turn.exec_manifest = manifest
 
-    async def make_judgement(self, episode: Episode) -> None:
+    async def _judge(self, episode: Episode) -> None:
         turn = episode.turns[-1]
         obs = turn.observation_manifest
 

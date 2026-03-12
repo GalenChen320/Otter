@@ -66,6 +66,11 @@ class BaseDataset(ABC):
         pass
 
     @abstractmethod
-    async def make_judgement(self, episode: Episode) -> None:
-        """从 turn.observation_manifest 读取观测，判定是否通过，更新 turn.passed。"""
+    async def _judge(self, episode: Episode) -> None:
+        """子类实现：从 turn.observation_manifest 读取观测，判定是否通过，更新 turn.passed。"""
         pass
+
+    async def make_judgement(self, episode: Episode) -> None:
+        """判定 + 保存 meta，标记 turn 完成。"""
+        await self._judge(episode)
+        episode.turns[-1].save_meta()
