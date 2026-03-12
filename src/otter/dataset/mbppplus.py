@@ -75,7 +75,7 @@ class MBPPPlusDataset(BaseDataset):
             return match.group(1).strip()
         return response.strip()
 
-    def prepare_input(self, episode: Episode) -> None:
+    def prepare_llm_input(self, episode: Episode) -> None:
         turn = episode.turns[-1]
 
         # 写入 prompt 文件
@@ -106,7 +106,7 @@ class MBPPPlusDataset(BaseDataset):
         )
         turn.input_manifest = manifest
 
-    def prepare_exec(self, episode: Episode) -> None:
+    def prepare_env_input(self, episode: Episode) -> None:
         turn = episode.turns[-1]
         response_manifest = turn.response_manifest
 
@@ -124,16 +124,16 @@ class MBPPPlusDataset(BaseDataset):
         full_code = f"{imports}\n\n{code}\n\n{problem.official_tests}"
 
         script_file = "solution.py"
-        (turn.response_path / script_file).write_text(full_code, encoding="utf-8")
+        (turn.exec_path / script_file).write_text(full_code, encoding="utf-8")
 
         # 写入 manifest 并设置句柄
         manifest = ExecManifest(
-            base_path=turn.response_path,
+            base_path=turn.exec_path,
             image_tag=self.IMAGE_TAG,
             script_file=script_file,
             commands=["python /tmp/solution.py"],
         )
-        (turn.response_path / "exec_manifest.json").write_text(
+        (turn.exec_path / "exec_manifest.json").write_text(
             json.dumps({
                 "image_tag": manifest.image_tag,
                 "script_file": manifest.script_file,

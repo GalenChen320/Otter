@@ -48,6 +48,7 @@ META_FILENAME = "meta.json"
 class Turn:
     input_path: Path | None = None
     response_path: Path | None = None
+    exec_path: Path | None = None
     observation_path: Path | None = None
     passed: bool | None = None
     input_manifest: InputManifest | None = None
@@ -103,15 +104,18 @@ class Episode:
         turn_dir = self.base_dir / f"turn_{len(self.turns) + 1}"
         input_dir = turn_dir / "input"
         response_dir = turn_dir / "response"
+        exec_dir = turn_dir / "exec"
         observation_dir = turn_dir / "observation"
 
         input_dir.mkdir(parents=True, exist_ok=True)
         response_dir.mkdir(parents=True, exist_ok=True)
+        exec_dir.mkdir(parents=True, exist_ok=True)
         observation_dir.mkdir(parents=True, exist_ok=True)
 
         self.turns.append(Turn(
             input_path=input_dir,
             response_path=response_dir,
+            exec_path=exec_dir,
             observation_path=observation_dir,
         ))
 
@@ -147,6 +151,7 @@ class Episode:
 
                 input_dir = turn_dir / "input"
                 response_dir = turn_dir / "response"
+                exec_dir = turn_dir / "exec"
                 observation_dir = turn_dir / "observation"
 
                 meta = json.loads(meta_path.read_text(encoding="utf-8"))
@@ -154,6 +159,7 @@ class Episode:
                 turns.append(Turn(
                     input_path=input_dir if input_dir.exists() else None,
                     response_path=response_dir if response_dir.exists() else None,
+                    exec_path=exec_dir if exec_dir.exists() else None,
                     observation_path=observation_dir if observation_dir.exists() else None,
                     passed=meta.get("passed"),
                 ))
