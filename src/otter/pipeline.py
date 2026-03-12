@@ -6,7 +6,6 @@ from otter import environment
 from otter.config.setting import get_settings
 from otter.episode import Episode
 from otter.logger import get_logger
-from otter.store import Store
 
 
 def create_dataset() -> dataset.BaseDataset:
@@ -37,19 +36,14 @@ def create_environment() -> environment.BaseEnvironment:
             raise ValueError(f"unknown environment_type: {settings.environment.environment_type}")
 
 
-def create_store() -> Store:
-    settings = get_settings()
-    return Store(output_dir=settings.experiment.output_dir)
-
-
-def get_pending_episodes(ds: dataset.BaseDataset, store: Store) -> list[Episode]:
+def get_pending_episodes(ds: dataset.BaseDataset) -> list[Episode]:
     """筛选未完成的 Episode。
 
     将每道题展开 samples_per_problem 份，每份是独立的 Episode。
     已完成的（resolved 或 exhausted）跳过，部分完成的继续。
     """
     settings = get_settings()
-    existing = store.sync_episodes()
+    existing = Episode.sync_all(settings.experiment.output_dir)
     episodes: list[Episode] = []
 
     for task_id in ds.task_ids:
@@ -71,12 +65,11 @@ async def run(
     ds: dataset.BaseDataset,
     llm_client: llm.BaseLLM,
     env_client: environment.BaseEnvironment,
-    store: Store,
 ) -> list[Episode]:
     settings = get_settings()
     logger = get_logger()
     gen_semaphore = asyncio.Semaphore(settings.llm.concurrency)
-    episodes = get_pending_episodes(ds, store)
+    episodes = get_pending_episodes(ds)
     logger.info("starting run: %d episodes to process", len(episodes))
 
     async def process(ep: Episode):
@@ -99,11 +92,8 @@ async def run(
                 # 5. Environment 执行（读 exec_manifest，写 observation 文件 + 设置 turn.observation_manifest）
                 await env_client.execute(ep)
 
-                # 6. Dataset 判定（读 observation_manifest，更新 turn.passed）
+                # 6. Dataset 判定（读 observation_manifest，更新 turn.passed，保存 meta）
                 await ds.make_judgement(ep)
-
-                # 7. 保存 meta（标记 turn 完成）
-                store.save_meta(ep)
 
             logger.info("[%s] turn %d completed (passed=%s)",
                         ep.eid, ep.total_turns, ep.turns[-1].passed)
@@ -121,10 +111,8 @@ async def main():
     ds.load()
 
     llm_client = create_llm()
-
     env_client = create_environment()
-    store = create_store()
 
     async with ds.run_context(settings.experiment.output_dir):
-        episodes = await run(ds, llm_client, env_client, store)
+        episodes = await run(ds, llm_client, env_client)
         logger.info("done: %d episodes processed", len(episodes))
