@@ -5,9 +5,8 @@ from datasets import load_dataset
 
 from otter.dataset.base import BaseDataset
 from otter.config.setting import get_settings
-from otter.episode import Episode, ExecutionObservation, InputManifest
-from otter.environment.docker import DockerEnvironment, DockerExecSpec
-from otter.llm.openai_compatible import OpenAICompatibleLLM
+from otter.episode import Episode, ExecManifest, InputManifest
+from otter.environment.docker import DockerEnvironment
 from otter.logger import get_logger
 
 
@@ -24,8 +23,6 @@ class MBPPPlusProblem:
 class MBPPPlusDataset(BaseDataset):
 
     IMAGE_TAG = "python:3.11-slim"
-    supported_llms = [OpenAICompatibleLLM]
-    supported_environments = [DockerEnvironment]
 
     def load(self):
         settings = get_settings()
@@ -109,40 +106,48 @@ class MBPPPlusDataset(BaseDataset):
         )
         turn.input_manifest = manifest
 
-    def prepare_exec(self, episode: Episode, response: str, env_type: type) -> DockerExecSpec:
-        if env_type not in self.supported_environments:
-            raise TypeError(f"MBPPPlusDataset does not support environment type: {env_type.__name__}")
-
+    def prepare_exec(self, episode: Episode) -> None:
         turn = episode.turns[-1]
+        response_manifest = turn.response_manifest
 
-        # 写入 response 文件
-        (turn.response_path / "response.txt").write_text(response, encoding="utf-8")
+        if not response_manifest or not response_manifest.response_file:
+            raise ValueError("MBPPPlusDataset requires 'response_file' in ResponseManifest")
 
-        # 构建 ExecSpec
+        # 从 response manifest 读取 response
+        response_path = response_manifest.base_path / response_manifest.response_file
+        response = response_path.read_text(encoding="utf-8")
+
+        # 提取代码，拼接测试，写入脚本文件
         code = self._extract_code(response)
         problem = self._problems[episode.task_id]
         imports = "\n".join(problem.extra_imports)
         full_code = f"{imports}\n\n{code}\n\n{problem.official_tests}"
 
-        return DockerExecSpec(
+        script_file = "solution.py"
+        (turn.response_path / script_file).write_text(full_code, encoding="utf-8")
+
+        # 写入 manifest 并设置句柄
+        manifest = ExecManifest(
+            base_path=turn.response_path,
             image_tag=self.IMAGE_TAG,
-            files_in=[(full_code, "/tmp/solution.py")],
+            script_file=script_file,
             commands=["python /tmp/solution.py"],
         )
-
-    async def make_judgement(self, episode: Episode, observation: ExecutionObservation) -> None:
-        turn = episode.turns[-1]
-
-        # 写入 observation 文件
-        obs_dict = {
-            "stdout": observation.stdout,
-            "stderr": observation.stderr,
-            "returncode": observation.returncode,
-            "timed_out": observation.timed_out,
-        }
-        (turn.observation_path / "observation.json").write_text(
-            json.dumps(obs_dict, ensure_ascii=False, indent=2), encoding="utf-8",
+        (turn.response_path / "exec_manifest.json").write_text(
+            json.dumps({
+                "image_tag": manifest.image_tag,
+                "script_file": manifest.script_file,
+                "commands": manifest.commands,
+            }, ensure_ascii=False, indent=2),
+            encoding="utf-8",
         )
+        turn.exec_manifest = manifest
 
-        # 判定
-        turn.passed = observation.returncode == 0 and not observation.timed_out
+    async def make_judgement(self, episode: Episode) -> None:
+        turn = episode.turns[-1]
+        obs = turn.observation_manifest
+
+        if not obs:
+            raise ValueError("MBPPPlusDataset requires ObservationManifest")
+
+        turn.passed = obs.returncode == 0 and not obs.timed_out

@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Any
 
-from otter.episode import ExecutionObservation
+from otter.episode import Episode
 
 
 class BaseEnvironment(ABC):
 
     @abstractmethod
-    async def execute(self, exec_input: Any) -> Any:
+    async def execute(self, episode: Episode) -> None:
         pass

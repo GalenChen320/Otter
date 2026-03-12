@@ -1,12 +1,11 @@
 import asyncio
+import json
 import tempfile
 from uuid import uuid4
 from pathlib import Path
-from dataclasses import dataclass, field
-from typing import Any
 
 from otter.config.setting import get_settings
-from otter.episode import ExecutionObservation
+from otter.episode import Episode, ObservationManifest
 from otter.environment.base import BaseEnvironment
 from otter.environment.utils.docker_utils import (
     get_docker_storage_device,
@@ -19,18 +18,6 @@ from otter.environment.utils.docker_utils import (
     copy_to_container,
     copy_from_container,
 )
-
-
-@dataclass
-class DockerExecSpec:
-    """DockerEnvironment 的执行规格。
-
-    由 Dataset 构建，描述一次执行需要做什么。
-    """
-    image_tag: str = ""                                   # 镜像 tag
-    files_in: list[tuple[str, str]] = field(default_factory=list)   # [(文件内容, 容器内绝对路径), ...]
-    commands: list[str] = field(default_factory=list)    # 按顺序执行的命令
-    files_out: list[tuple[str, Path]] = field(default_factory=list) # [(容器内路径, 本地路径), ...]
 
 
 class DockerEnvironment(BaseEnvironment):
@@ -64,62 +51,84 @@ class DockerEnvironment(BaseEnvironment):
         """删除镜像。"""
         await remove_image(image_tag, missing_ok=missing_ok)
 
-    async def execute(self, exec_input: Any) -> ExecutionObservation:
-        """创建容器 → 注入文件 → 按顺序执行命令 → 导出文件 → 销毁容器。"""
-        spec: DockerExecSpec = exec_input
+    async def execute(self, episode: Episode) -> None:
+        """从 exec_manifest 读取执行规格，创建容器执行，写入 observation_manifest。"""
+        turn = episode.turns[-1]
+        manifest = turn.exec_manifest
+
+        if not manifest:
+            raise ValueError("DockerEnvironment requires ExecManifest")
+        if not manifest.image_tag:
+            raise ValueError("DockerEnvironment requires 'image_tag' in ExecManifest")
+
+        timeout = manifest.timeout or self._timeout
         container_name = f"otter-{uuid4().hex[:8]}"
+        obs_dir = turn.observation_path
+
         try:
             await create_container(
-                spec.image_tag, container_name,
+                manifest.image_tag, container_name,
                 extra_params=self._container_params,
             )
             await start_container(container_name)
 
-            # 注入文件
-            for content, container_dst in spec.files_in:
-                with tempfile.TemporaryDirectory() as tmpdir:
-                    local_path = Path(tmpdir) / Path(container_dst).name
-                    local_path.write_text(content, encoding="utf-8")
-                    container_dir = str(Path(container_dst).parent)
-                    await copy_to_container(container_name, local_path, container_dir)
+            # 注入脚本文件
+            if manifest.script_file:
+                script_path = manifest.base_path / manifest.script_file
+                await copy_to_container(container_name, script_path, "/tmp")
 
             # 按顺序执行命令
             last_result = None
-            for cmd in spec.commands:
+            for cmd in (manifest.commands or []):
                 try:
                     last_result = await asyncio.wait_for(
-                        exec_container(container_name, cmd), timeout=self._timeout,
+                        exec_container(container_name, cmd), timeout=timeout,
                     )
                 except asyncio.TimeoutError:
-                    return ExecutionObservation(
-                        stdout="",
-                        stderr=f"Command timed out after {self._timeout}s: {cmd}",
-                        returncode=-1,
-                        timed_out=True,
-                    )
+                    self._write_observation(turn, obs_dir, "", f"Command timed out after {timeout}s: {cmd}", -1, True)
+                    return
                 if last_result.returncode != 0:
-                    return ExecutionObservation(
-                        stdout=last_result.stdout,
-                        stderr=last_result.stderr,
-                        returncode=last_result.returncode,
-                    )
+                    self._write_observation(turn, obs_dir, last_result.stdout, last_result.stderr, last_result.returncode, False)
+                    return
 
-            # 导出文件
-            for container_src, local_dst in spec.files_out:
-                await copy_from_container(container_name, container_src, local_dst)
-
-            return ExecutionObservation(
-                stdout=last_result.stdout if last_result else "",
-                stderr=last_result.stderr if last_result else "",
-                returncode=last_result.returncode if last_result else 0,
+            # 成功
+            self._write_observation(
+                turn, obs_dir,
+                last_result.stdout if last_result else "",
+                last_result.stderr if last_result else "",
+                last_result.returncode if last_result else 0,
+                False,
             )
 
         except Exception as e:
-            return ExecutionObservation(
-                stdout="",
-                stderr=str(e),
-                returncode=-1,
-            )
+            self._write_observation(turn, obs_dir, "", str(e), -1, False)
 
         finally:
             await remove_container(container_name, force=True, missing_ok=True)
+
+    @staticmethod
+    def _write_observation(turn, obs_dir: Path, stdout: str, stderr: str, returncode: int, timed_out: bool) -> None:
+        """写入 observation 文件和 manifest。"""
+        stdout_file = "stdout.txt"
+        stderr_file = "stderr.txt"
+
+        (obs_dir / stdout_file).write_text(stdout, encoding="utf-8")
+        (obs_dir / stderr_file).write_text(stderr, encoding="utf-8")
+
+        manifest = ObservationManifest(
+            base_path=obs_dir,
+            stdout_file=stdout_file,
+            stderr_file=stderr_file,
+            returncode=returncode,
+            timed_out=timed_out,
+        )
+        (obs_dir / "manifest.json").write_text(
+            json.dumps({
+                "stdout_file": stdout_file,
+                "stderr_file": stderr_file,
+                "returncode": returncode,
+                "timed_out": timed_out,
+            }, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        turn.observation_manifest = manifest
