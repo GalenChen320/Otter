@@ -43,13 +43,14 @@ def get_pending_episodes(ds: dataset.BaseDataset) -> list[Episode]:
     已完成的（resolved 或 exhausted）跳过，部分完成的继续。
     """
     settings = get_settings()
-    existing = Episode.sync_all(settings.experiment.output_dir)
+    output_dir = settings.experiment.output_dir
+    existing = Episode.sync_all(output_dir)
     episodes: list[Episode] = []
 
     for task_id in ds.task_ids:
         for k in range(settings.llm.samples_per_problem):
             eid = Episode.make_eid(task_id, k)
-            ep_dir = ds.base_dir / eid
+            ep_dir = output_dir / eid
             if eid in existing:
                 ep = existing[eid]
                 if ep.resolved or ep.exhausted(settings.experiment.max_turns):
@@ -80,14 +81,14 @@ async def run(
                 # 1. 创建新 Turn
                 ep.next_turn()
 
-                # 2. Dataset 准备 input（写文件 + 设置 turn.input_manifest）
-                ds.prepare_input(ep)
+                # 2. Dataset 准备 LLM 输入（写文件 + 设置 turn.input_manifest）
+                ds.prepare_llm_input(ep)
 
                 # 3. LLM 生成（读 input_manifest，写 response 文件 + 设置 turn.response_manifest）
                 await llm_client.generate(ep)
 
                 # 4. Dataset 构建执行规格（读 response_manifest，写执行文件 + 设置 turn.exec_manifest）
-                ds.prepare_exec(ep)
+                ds.prepare_env_input(ep)
 
                 # 5. Environment 执行（读 exec_manifest，写 observation 文件 + 设置 turn.observation_manifest）
                 await env_client.execute(ep)

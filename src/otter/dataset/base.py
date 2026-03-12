@@ -56,12 +56,12 @@ class BaseDataset(ABC):
     # ── Pipeline 编排接口 ──
 
     @abstractmethod
-    def prepare_input(self, episode: Episode) -> None:
+    def prepare_llm_input(self, episode: Episode) -> None:
         """写入 input 文件，设置 turn.input_manifest。"""
         pass
 
     @abstractmethod
-    def prepare_exec(self, episode: Episode) -> None:
+    def prepare_env_input(self, episode: Episode) -> None:
         """从 turn.response_manifest 读取响应，写入执行文件，设置 turn.exec_manifest。"""
         pass
 
