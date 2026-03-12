@@ -3,23 +3,26 @@ from pathlib import Path
 import json
 import shutil
 
+@dataclass
+class BaseManifest:
+    pass
 
 @dataclass
-class InputManifest:
+class InputManifest(BaseManifest):
     """LLM 输入侧的句柄。Dataset 写入，LLM 读取。"""
     base_path: Path | None = None
     messages_file: str | None = None
 
 
 @dataclass
-class ResponseManifest:
+class ResponseManifest(BaseManifest):
     """LLM 输出侧的句柄。LLM 写入，Dataset 读取。"""
     base_path: Path | None = None
     response_file: str | None = None
 
 
 @dataclass
-class ExecManifest:
+class ExecManifest(BaseManifest):
     """执行侧的句柄。Dataset 写入，Environment 读取。"""
     base_path: Path | None = None
     image_tag: str | None = None
@@ -29,7 +32,7 @@ class ExecManifest:
 
 
 @dataclass
-class ObservationManifest:
+class ObservationManifest(BaseManifest):
     """观测侧的句柄。Environment 写入，Dataset 读取。"""
     base_path: Path | None = None
     stdout_file: str | None = None
