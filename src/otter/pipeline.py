@@ -87,11 +87,18 @@ async def run(
                 # 1. 创建新 Turn
                 ep.next_turn()
 
-                # 2. Dataset 准备 input 并构建 LLM 输入
-                llm_input = ds.prepare_input(ep, type(llm_client))
+                # Step1. 我希望这里准备的输入是跟llm_client的类别无关，
+                # 特别的，prepare_input会在input文件夹里面写一个json文件和，其他文件也烦在文件夹里。
+                # 不同的llm_client，他们会需要不同的字段，比如对于一般的mbppplus和目前有的llmclient来说，json里面只需要一个messages_file字段/
+                # ds.prepare_input(ep)
+
+                # Step2. 这里
+                # 2. Dataset 准备 input（写文件 + 设置 turn.input_manifest）
+                ds.prepare_input(ep)
 
                 # 3. LLM 生成
-                response = await llm_client.generate(llm_input)
+                turn = ep.turns[-1]
+                response = await llm_client.generate(turn.input_manifest)
 
                 # 4. Dataset 写 response 并构建 ExecSpec
                 spec = ds.prepare_exec(ep, response, type(env_client))
@@ -121,8 +128,6 @@ async def main():
     ds.load()
 
     llm_client = create_llm()
-    if not await llm_client.ping():
-        raise SystemExit("LLM ping failed, check your config")
 
     env_client = create_environment()
     store = create_store()

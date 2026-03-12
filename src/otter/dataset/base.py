@@ -59,8 +59,8 @@ class BaseDataset(ABC):
     # ── Pipeline 编排接口 ──
 
     @abstractmethod
-    def prepare_input(self, episode: Episode, llm_type: type) -> Any:
-        """往 episode.turns[-1].input_path 写入输入文件，并根据 llm_type 返回 LLM 能消费的格式。"""
+    def prepare_input(self, episode: Episode) -> None:
+        """往 episode.turns[-1].input_path 写入输入文件，并设置 turn.input_manifest。"""
         pass
 
     @abstractmethod
