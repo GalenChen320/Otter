@@ -20,11 +20,11 @@ def create_dataset() -> dataset.BaseDataset:
 
 def create_llm() -> llm.BaseLLM:
     settings = get_settings()
-    match settings.llm.response_format:
+    match settings.llm.llm_type:
         case "openai_compatible":
             return llm.OpenAICompatibleLLM()
         case _:
-            raise ValueError(f"unknown response_format: {settings.llm.response_format}")
+            raise ValueError(f"unknown llm_type: {settings.llm.llm_type}")
 
 
 def create_environment() -> environment.BaseEnvironment:
@@ -84,16 +84,16 @@ async def run(
                 # 2. Dataset 准备 LLM 输入（写文件 + 设置 turn.llm_input_manifest）
                 ds.prepare_llm_input(ep)
 
-                # 3. LLM 生成（读 llm_input_manifest，写 response 文件 + 设置 turn.response_manifest）
+                # 3. LLM 生成（读 llm_input_manifest，写 llm_output 文件 + 设置 turn.llm_output_manifest）
                 await llm_client.generate(ep)
 
-                # 4. Dataset 构建执行规格（读 response_manifest，写执行文件 + 设置 turn.env_input_manifest）
+                # 4. Dataset 构建执行规格（读 llm_output_manifest，写执行文件 + 设置 turn.env_input_manifest）
                 ds.prepare_env_input(ep)
 
-                # 5. Environment 执行（读 env_input_manifest，写 observation 文件 + 设置 turn.observation_manifest）
+                # 5. Environment 执行（读 env_input_manifest，写 env_output 文件 + 设置 turn.env_output_manifest）
                 await env_client.execute(ep)
 
-                # 6. Dataset 判定（读 observation_manifest，更新 turn.passed，保存 meta）
+                # 6. Dataset 判定（读 env_output_manifest，更新 turn.passed，保存 meta）
                 await ds.make_judgement(ep)
 
             logger.info("[%s] turn %d completed (passed=%s)",

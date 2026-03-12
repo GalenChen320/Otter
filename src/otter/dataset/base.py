@@ -62,12 +62,12 @@ class BaseDataset(ABC):
 
     @abstractmethod
     def prepare_env_input(self, episode: Episode) -> None:
-        """从 turn.response_manifest 读取响应，写入执行文件，设置 turn.env_input_manifest。"""
+        """从 turn.llm_output_manifest 读取响应，写入执行文件，设置 turn.env_input_manifest。"""
         pass
 
     @abstractmethod
     async def _judge(self, episode: Episode) -> None:
-        """子类实现：从 turn.observation_manifest 读取观测，判定是否通过，更新 turn.passed。"""
+        """子类实现：从 turn.env_output_manifest 读取观测，判定是否通过，更新 turn.passed。"""
         pass
 
     async def make_judgement(self, episode: Episode) -> None:

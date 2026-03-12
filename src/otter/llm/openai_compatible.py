@@ -4,7 +4,7 @@ from openai import AsyncOpenAI
 from .base import BaseLLM
 
 from otter.config.setting import get_settings
-from otter.episode import Episode, ResponseManifest
+from otter.episode import Episode, LLMOutputManifest
 
 
 class OpenAICompatibleLLM(BaseLLM):
@@ -33,10 +33,10 @@ class OpenAICompatibleLLM(BaseLLM):
             prompt = t.llm_input_manifest.prompt_file.read_text(encoding="utf-8")
             messages.append({"role": "user", "content": prompt})
 
-            # 历史 Turn 有 response，当前 Turn 还没有
+            # 历史 Turn 有 llm_output，当前 Turn 还没有
             if t is not turn:
-                response_file = t.response_path / "response.txt"
-                messages.append({"role": "assistant", "content": response_file.read_text(encoding="utf-8")})
+                llm_output_file = t.llm_output_path / "response.txt"
+                messages.append({"role": "assistant", "content": llm_output_file.read_text(encoding="utf-8")})
 
         settings = get_settings()
         response = await self.client.chat.completions.create(
@@ -45,14 +45,14 @@ class OpenAICompatibleLLM(BaseLLM):
         )
         content = response.choices[0].message.content
 
-        # 写 response 文件
-        response_file = turn.response_path / "response.txt"
-        response_file.write_text(content, encoding="utf-8")
+        # 写 llm_output 文件
+        llm_output_file = turn.llm_output_path / "response.txt"
+        llm_output_file.write_text(content, encoding="utf-8")
 
         # 写 manifest.json
-        manifest = ResponseManifest(response_file=response_file)
-        (turn.response_path / "manifest.json").write_text(
-            json.dumps({"response_file": str(response_file)}),
+        manifest = LLMOutputManifest(llm_output_file=llm_output_file)
+        (turn.llm_output_path / "manifest.json").write_text(
+            json.dumps({"llm_output_file": str(llm_output_file)}),
             encoding="utf-8",
         )
-        turn.response_manifest = manifest
+        turn.llm_output_manifest = manifest
