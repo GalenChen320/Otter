@@ -21,16 +21,16 @@ class OpenAICompatibleLLM(BaseLLM):
 
     async def _generate(self, episode: Episode) -> None:
         turn = episode.turns[-1]
-        input_manifest = turn.input_manifest
+        input_manifest = turn.llm_input_manifest
 
         if not input_manifest or not input_manifest.prompt_file:
-            raise ValueError("OpenAICompatibleLLM requires 'prompt_file' in InputManifest")
+            raise ValueError("OpenAICompatibleLLM requires 'prompt_file' in LLMInputManifest")
 
         # 遍历所有 Turn 构建多轮 messages
         messages = []
         for t in episode.turns:
             # 每轮的 prompt（第一轮是题目，后续是 feedback）
-            prompt = t.input_manifest.prompt_file.read_text(encoding="utf-8")
+            prompt = t.llm_input_manifest.prompt_file.read_text(encoding="utf-8")
             messages.append({"role": "user", "content": prompt})
 
             # 历史 Turn 有 response，当前 Turn 还没有

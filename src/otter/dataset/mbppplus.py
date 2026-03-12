@@ -5,7 +5,7 @@ from datasets import load_dataset
 
 from otter.dataset.base import BaseDataset
 from otter.config.setting import get_settings
-from otter.episode import Episode, ExecManifest, InputManifest
+from otter.episode import Episode, EnvInputManifest, LLMInputManifest
 from otter.environment.docker import DockerEnvironment
 from otter.logger import get_logger
 
@@ -84,16 +84,16 @@ class MBPPPlusDataset(BaseDataset):
         else:
             prompt = "Your code is incorrect. Please try again."
 
-        prompt_file = turn.input_path / "prompt.txt"
+        prompt_file = turn.llm_input_path / "prompt.txt"
         prompt_file.write_text(prompt, encoding="utf-8")
 
         # 写入 manifest 并设置句柄
-        manifest = InputManifest(prompt_file=prompt_file)
-        (turn.input_path / "manifest.json").write_text(
+        manifest = LLMInputManifest(prompt_file=prompt_file)
+        (turn.llm_input_path / "manifest.json").write_text(
             json.dumps({"prompt_file": str(prompt_file)}, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        turn.input_manifest = manifest
+        turn.llm_input_manifest = manifest
 
     def prepare_env_input(self, episode: Episode) -> None:
         turn = episode.turns[-1]
@@ -111,16 +111,16 @@ class MBPPPlusDataset(BaseDataset):
         imports = "\n".join(problem.extra_imports)
         full_code = f"{imports}\n\n{code}\n\n{problem.official_tests}"
 
-        script_file = turn.exec_path / "solution.py"
+        script_file = turn.env_input_path / "solution.py"
         script_file.write_text(full_code, encoding="utf-8")
 
         # 写入 manifest 并设置句柄
-        manifest = ExecManifest(
+        manifest = EnvInputManifest(
             image_tag=self.IMAGE_TAG,
             script_file=script_file,
             commands=["python /tmp/solution.py"],
         )
-        (turn.exec_path / "exec_manifest.json").write_text(
+        (turn.env_input_path / "env_input_manifest.json").write_text(
             json.dumps({
                 "image_tag": manifest.image_tag,
                 "script_file": str(manifest.script_file),
@@ -128,7 +128,7 @@ class MBPPPlusDataset(BaseDataset):
             }, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        turn.exec_manifest = manifest
+        turn.env_input_manifest = manifest
 
     async def _judge(self, episode: Episode) -> None:
         turn = episode.turns[-1]

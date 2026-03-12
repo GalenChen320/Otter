@@ -61,14 +61,14 @@ class DockerEnvironment(BaseEnvironment):
         await remove_image(image_tag, missing_ok=missing_ok)
 
     async def execute(self, episode: Episode) -> None:
-        """从 exec_manifest 读取执行规格，创建容器执行，写入 observation_manifest。"""
+        """从 env_input_manifest 读取执行规格，创建容器执行，写入 observation_manifest。"""
         turn = episode.turns[-1]
-        manifest = turn.exec_manifest
+        manifest = turn.env_input_manifest
 
         if not manifest:
-            raise ValueError("DockerEnvironment requires ExecManifest")
+            raise ValueError("DockerEnvironment requires EnvInputManifest")
         if not manifest.image_tag:
-            raise ValueError("DockerEnvironment requires 'image_tag' in ExecManifest")
+            raise ValueError("DockerEnvironment requires 'image_tag' in EnvInputManifest")
 
         timeout = manifest.timeout or self._timeout
         container_name = f"otter-{uuid4().hex[:8]}"
