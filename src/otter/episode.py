@@ -18,6 +18,12 @@ def _is_path_field(hint) -> bool:
 @dataclass
 class BaseManifest:
     def to_dict(self) -> dict:
+        """序列化为可 JSON 化的 dict。
+
+        当前仅对 Path 类型字段做 Path → str 转换，
+        其余字段（str / int / bool / list[str] 等）直接透传。
+        与 from_dict 的类型转换逻辑对称，两者需保持一致。
+        """
         result = {}
         for f in fields(self):
             val = getattr(self, f.name)
@@ -28,6 +34,12 @@ class BaseManifest:
 
     @classmethod
     def from_dict(cls, data: dict) -> "BaseManifest":
+        """从 dict 反序列化重建 Manifest。
+
+        当前仅对 Path 类型字段做 str → Path 转换，
+        其余字段（str / int / bool / list[str] 等）依赖 JSON 原生类型直接匹配。
+        若将来引入 list[Path] 等复合类型，需扩展此方法的类型转换逻辑。
+        """
         hints = get_type_hints(cls)
         kwargs = {}
         for key, val in data.items():
