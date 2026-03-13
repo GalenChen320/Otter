@@ -72,11 +72,12 @@ async def run_turn(
     """执行单轮：创建 Turn → prepare → generate → prepare → execute → judge。"""
     logger = get_logger()
     ep.next_turn()
-    logger.info("[%s] turn %d started", ep.eid, ep.total_turns)
 
     ds.prepare_llm_input(ep)
 
+    logger.info("[%s] turn %d queued", ep.eid, ep.total_turns)
     async with semaphore:
+        logger.info("[%s] turn %d generating", ep.eid, ep.total_turns)
         await llm_client.generate(ep)
 
     ds.prepare_env_input(ep)
