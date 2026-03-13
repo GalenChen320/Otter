@@ -21,7 +21,7 @@ class MBPPPlusProblem:
 
 class MBPPPlusDataset(BaseDataset):
 
-    IMAGE_TAG = "python:3.11-slim"
+    IMAGE_TAG = "otter-mbppplus:latest"
 
     def load(self):
         settings = get_settings()
@@ -38,7 +38,11 @@ class MBPPPlusDataset(BaseDataset):
 
     async def setup(self, output_dir) -> None:
         await super().setup(output_dir)
-        await DockerEnvironment.build_image(self.IMAGE_TAG, "FROM python:3.11-slim\n")
+        await DockerEnvironment.build_image(
+            self.IMAGE_TAG,
+            "FROM python:3.11-slim\n"
+            "RUN pip install uv && uv pip install --system numpy==2.2.3\n",
+        )
 
     async def teardown(self) -> None:
         await DockerEnvironment.remove_image(self.IMAGE_TAG)
@@ -64,8 +68,9 @@ class MBPPPlusDataset(BaseDataset):
             f"{problem.prompt}\n\n"
             f"Your code should pass the following tests:\n"
             f"{sample}\n\n"
-            f"Note: Only the Python standard library is available. "
-            f"Do not use any third-party packages."
+            f"**DO NOT** use any third-party packages "
+            f"(e.g. numpy, pandas, scipy, sympy, sklearn, torch). "
+            f"Any import of a non-standard library will cause a runtime error."
         )
 
     def _extract_code(self, response: str) -> str:
