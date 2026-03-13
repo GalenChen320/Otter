@@ -72,7 +72,7 @@ LLM__model=gpt-4o
 | `EXPERIMENT__max_turns` | `1` | 最大反馈迭代轮次 |
 | `EXPERIMENT__samples_per_problem` | `1` | 每道题独立采样次数 |
 | `EXPERIMENT__feedback_strategy` | `error_message` | 反馈策略（`minimal` / `error_message` / `progressive`） |
-| `DATASET__dataset_name` | `mbppplus` | 数据集（`mbppplus` / `humaneval` / `apps`） |
+| `DATASET__dataset_name` | `mbppplus` | 数据集名称 |
 | `DATASET__cache_dir` | `data/cache` | 数据集缓存目录 |
 | `DOCKER__cpus` | `1.0` | 容器 CPU 限制 |
 | `DOCKER__memory` | `512m` | 容器内存限制 |
@@ -104,8 +104,12 @@ experiments/{experiment_id}/
 | 数据集 | 状态 | 说明 |
 |---|---|---|
 | [MBPP+](https://huggingface.co/datasets/evalplus/mbppplus) | 完整支持 | 函数级 Python 编程题 |
-| HumanEval | 开发中 | 函数级 Python 编程题 |
-| APPS | 开发中 | 竞赛级编程题 |
+| [LiveCodeBench](https://livecodebench.github.io/) | 计划中 | 无污染的实时编程题 |
+| [EvalPlus](https://github.com/evalplus/evalplus) | 计划中 | 严格的 LLM4Code 评测集 |
+| [SWE-Bench](https://www.swebench.com/) | 计划中 | 真实 GitHub Issue 修复 |
+| [Tau2Bench](https://github.com/sierra-research/tau2-bench) | 计划中 | 多轮智能体任务评测 |
+| [TerminalBench](https://terminalbench.com/) | 计划中 | 终端环境编程任务 |
+| [SWE-CI](https://github.com/SWE-CI/SWE-CI) | 计划中 | CI 驱动的软件工程任务 |
 
 ## 许可证
 

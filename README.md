@@ -72,7 +72,7 @@ LLM__model=gpt-4o
 | `EXPERIMENT__max_turns` | `1` | Max feedback iteration turns |
 | `EXPERIMENT__samples_per_problem` | `1` | Independent samples per problem |
 | `EXPERIMENT__feedback_strategy` | `error_message` | Feedback strategy (`minimal` / `error_message` / `progressive`) |
-| `DATASET__dataset_name` | `mbppplus` | Dataset (`mbppplus` / `humaneval` / `apps`) |
+| `DATASET__dataset_name` | `mbppplus` | Dataset name |
 | `DATASET__cache_dir` | `data/cache` | Dataset cache directory |
 | `DOCKER__cpus` | `1.0` | Container CPU limit |
 | `DOCKER__memory` | `512m` | Container memory limit |
@@ -104,8 +104,12 @@ experiments/{experiment_id}/
 | Dataset | Status | Description |
 |---|---|---|
 | [MBPP+](https://huggingface.co/datasets/evalplus/mbppplus) | Fully supported | Function-level Python problems |
-| HumanEval | In development | Function-level Python problems |
-| APPS | In development | Competition-level programming problems |
+| [LiveCodeBench](https://livecodebench.github.io/) | Planned | Contamination-free live coding problems |
+| [EvalPlus](https://github.com/evalplus/evalplus) | Planned | Rigorous LLM4Code benchmarks |
+| [SWE-Bench](https://www.swebench.com/) | Planned | Real-world GitHub issue resolution |
+| [Tau2Bench](https://github.com/sierra-research/tau2-bench) | Planned | Multi-turn agentic task evaluation |
+| [TerminalBench](https://terminalbench.com/) | Planned | Terminal-based coding tasks |
+| [SWE-CI](https://github.com/SWE-CI/SWE-CI) | Planned | CI-driven software engineering tasks |
 
 ## License
 
