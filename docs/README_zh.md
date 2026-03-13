@@ -66,11 +66,11 @@ LLM__model=gpt-4o
 |---|---|---|
 | `LLM__llm_type` | `openai_compatible` | LLM 接口类型 |
 | `LLM__concurrency` | `1` | LLM 并发请求数 |
-| `LLM__samples_per_problem` | `1` | 每道题独立采样次数 |
 | `LLM__max_retries` | `3` | API 调用失败重试次数 |
 | `LLM__retry_base_delay` | `1.0` | 重试退避基础延迟（秒） |
 | `EXPERIMENT__experiment_id` | `default` | 实验 ID，结果存入 `experiments/{id}/` |
 | `EXPERIMENT__max_turns` | `1` | 最大反馈迭代轮次 |
+| `EXPERIMENT__samples_per_problem` | `1` | 每道题独立采样次数 |
 | `EXPERIMENT__feedback_strategy` | `error_message` | 反馈策略（`minimal` / `error_message` / `progressive`） |
 | `DATASET__dataset_name` | `mbppplus` | 数据集（`mbppplus` / `humaneval` / `apps`） |
 | `DATASET__cache_dir` | `data/cache` | 数据集缓存目录 |

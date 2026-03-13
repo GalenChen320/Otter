@@ -48,10 +48,6 @@ class LLMSettings(BaseSettings):
         default=1,
         description="Max concurrent LLM requests"
     )
-    samples_per_problem: int = tracked_field(
-        default=1,
-        description="Independent samples per problem"
-    )
     max_retries: int = tracked_field(
         default=3,
         description="Max retries on API failure"
@@ -166,6 +162,10 @@ class ExperimentSettings(BaseSettings):
     max_turns: int = tracked_field(
         default=1,
         description="Max feedback iterations per episode"
+    )
+    samples_per_problem: int = tracked_field(
+        default=1,
+        description="Independent samples per problem"
     )
     feedback_strategy: Literal[
         "minimal",

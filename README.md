@@ -66,11 +66,11 @@ LLM__model=gpt-4o
 |---|---|---|
 | `LLM__llm_type` | `openai_compatible` | LLM interface type |
 | `LLM__concurrency` | `1` | Max concurrent LLM requests |
-| `LLM__samples_per_problem` | `1` | Independent samples per problem |
 | `LLM__max_retries` | `3` | API call retry attempts |
 | `LLM__retry_base_delay` | `1.0` | Retry backoff base delay (seconds) |
 | `EXPERIMENT__experiment_id` | `default` | Experiment ID, results saved to `experiments/{id}/` |
 | `EXPERIMENT__max_turns` | `1` | Max feedback iteration turns |
+| `EXPERIMENT__samples_per_problem` | `1` | Independent samples per problem |
 | `EXPERIMENT__feedback_strategy` | `error_message` | Feedback strategy (`minimal` / `error_message` / `progressive`) |
 | `DATASET__dataset_name` | `mbppplus` | Dataset (`mbppplus` / `humaneval` / `apps`) |
 | `DATASET__cache_dir` | `data/cache` | Dataset cache directory |
