@@ -37,12 +37,17 @@ class DockerEnvironment(BaseEnvironment):
         self._container_params: dict = {
             "stdin_open": True,
             "tty": True,
-            "network_mode": docker_cfg.network_mode,
-            "nano_cpus": int(docker_cfg.cpus * 1e9),
-            "mem_limit": docker_cfg.memory,
-            "memswap_limit": docker_cfg.memory_swap,
-            "mem_reservation": docker_cfg.memory_reservation,
         }
+        if docker_cfg.network_mode is not None:
+            self._container_params["network_mode"] = docker_cfg.network_mode
+        if docker_cfg.cpus is not None:
+            self._container_params["nano_cpus"] = int(docker_cfg.cpus * 1e9)
+        if docker_cfg.memory is not None:
+            self._container_params["mem_limit"] = docker_cfg.memory
+        if docker_cfg.memory_swap is not None:
+            self._container_params["memswap_limit"] = docker_cfg.memory_swap
+        if docker_cfg.memory_reservation is not None:
+            self._container_params["mem_reservation"] = docker_cfg.memory_reservation
         if docker_cfg.device_read_bps or docker_cfg.device_write_bps:
             device = get_docker_storage_device()
             if docker_cfg.device_read_bps:
