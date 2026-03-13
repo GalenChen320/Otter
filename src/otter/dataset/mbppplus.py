@@ -1,4 +1,3 @@
-import json
 import re
 from dataclasses import dataclass
 from datasets import load_dataset
@@ -75,7 +74,7 @@ class MBPPPlusDataset(BaseDataset):
             return match.group(1).strip()
         return response.strip()
 
-    def prepare_llm_input(self, episode: Episode) -> None:
+    def _prepare_llm_input(self, episode: Episode) -> LLMInputManifest:
         turn = episode.turns[-1]
 
         # 第一轮：写题目 prompt；后续轮次：写 feedback
@@ -87,15 +86,9 @@ class MBPPPlusDataset(BaseDataset):
         prompt_file = turn.llm_input_path / "prompt.txt"
         prompt_file.write_text(prompt, encoding="utf-8")
 
-        # 写入 manifest 并设置句柄
-        manifest = LLMInputManifest(prompt_file=prompt_file)
-        (turn.llm_input_path / "manifest.json").write_text(
-            json.dumps({"prompt_file": str(prompt_file)}, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        turn.llm_input_manifest = manifest
+        return LLMInputManifest(prompt_file=prompt_file)
 
-    def prepare_env_input(self, episode: Episode) -> None:
+    def _prepare_env_input(self, episode: Episode) -> EnvInputManifest:
         turn = episode.turns[-1]
         llm_output_manifest = turn.llm_output_manifest
 
@@ -114,21 +107,11 @@ class MBPPPlusDataset(BaseDataset):
         script_file = turn.env_input_path / "solution.py"
         script_file.write_text(full_code, encoding="utf-8")
 
-        # 写入 manifest 并设置句柄
-        manifest = EnvInputManifest(
+        return EnvInputManifest(
             image_tag=self.IMAGE_TAG,
             script_file=script_file,
             commands=["python /tmp/solution.py"],
         )
-        (turn.env_input_path / "env_input_manifest.json").write_text(
-            json.dumps({
-                "image_tag": manifest.image_tag,
-                "script_file": str(manifest.script_file),
-                "commands": manifest.commands,
-            }, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        turn.env_input_manifest = manifest
 
     async def _judge(self, episode: Episode) -> None:
         turn = episode.turns[-1]
