@@ -63,7 +63,9 @@ class MBPPPlusDataset(BaseDataset):
         return (
             f"{problem.prompt}\n\n"
             f"Your code should pass the following tests:\n"
-            f"{sample}"
+            f"{sample}\n\n"
+            f"Note: Only the Python standard library is available. "
+            f"Do not use any third-party packages."
         )
 
     def _extract_code(self, response: str) -> str:
