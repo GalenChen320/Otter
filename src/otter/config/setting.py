@@ -1,11 +1,22 @@
 from pathlib import Path
-from typing import Literal
+from pydantic import Field
+from typing import Literal, Any
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 ROOT_DIR = Path(__file__).parent.parent.parent.parent
 
 _env_file: str = ".env"
+
+
+def tracked_field(default=..., **kwargs) -> Any:
+    extra = kwargs.pop("json_schema_extra", {})
+    return Field(default, json_schema_extra={"core": True, **extra}, **kwargs)
+
+
+def untracked_field(default=..., **kwargs) -> Any:
+    extra = kwargs.pop("json_schema_extra", {})
+    return Field(default, json_schema_extra={"core": False, **extra}, **kwargs)
 
 
 def set_env_file(path: str) -> None:
@@ -18,16 +29,37 @@ class LLMSettings(BaseSettings):
         env_prefix="LLM__", 
         extra="ignore"
     )
-    api_key: str
-    base_url: str
-    model: str
+    api_key: str = untracked_field(
+        description="API key for the LLM provider"
+    )
+    base_url: str = tracked_field(
+        description="Base URL of the LLM API endpoint"
+    )
+    model: str = tracked_field(
+        description="Model name to use for generation"
+    )
     llm_type: Literal[
         "openai_compatible"
-    ] = "openai_compatible"
-    concurrency: int = 1
-    samples_per_problem: int = 1
-    max_retries: int = 3
-    retry_base_delay: float = 1.0
+    ] = tracked_field(
+        default="openai_compatible",
+        description="LLM client type"
+    )
+    concurrency: int = untracked_field(
+        default=1,
+        description="Max concurrent LLM requests"
+    )
+    samples_per_problem: int = tracked_field(
+        default=1,
+        description="Independent samples per problem"
+    )
+    max_retries: int = tracked_field(
+        default=3,
+        description="Max retries on API failure"
+    )
+    retry_base_delay: float = tracked_field(
+        default=1.0,
+        description="Base delay in seconds for exponential backoff"
+    )
 
 
 class DockerSettings(BaseSettings):
@@ -35,14 +67,38 @@ class DockerSettings(BaseSettings):
         env_prefix="DOCKER__",
         extra="ignore"
     )
-    cpus: float = 1.0
-    memory: str = "512m"
-    memory_swap: str = "512m"
-    memory_reservation: str = "256m"
-    network_mode: str = "none"
-    device_read_bps: str | None = "128m"
-    device_write_bps: str | None = "128m"
-    timeout: int = 10
+    cpus: float = tracked_field(
+        default=1.0,
+        description="CPU cores allocated per container"
+    )
+    memory: str = tracked_field(
+        default="512m",
+        description="Memory limit per container"
+    )
+    memory_swap: str = tracked_field(
+        default="512m",
+        description="Swap limit per container"
+    )
+    memory_reservation: str = tracked_field(
+        default="256m",
+        description="Soft memory limit per container"
+    )
+    network_mode: str = tracked_field(
+        default="none",
+        description="Container network mode"
+    )
+    device_read_bps: str | None = tracked_field(
+        default="128m",
+        description="Device read rate limit"
+    )
+    device_write_bps: str | None = tracked_field(
+        default="128m",
+        description="Device write rate limit"
+    )
+    timeout: int = tracked_field(
+        default=10,
+        description="Command execution timeout in seconds"
+    )
 
 
 class EnvironmentSettings(BaseSettings):
@@ -50,7 +106,12 @@ class EnvironmentSettings(BaseSettings):
         env_prefix="ENVIRONMENT__", 
         extra="ignore"
     )
-    environment_type: Literal["docker"] = "docker"
+    environment_type: Literal[
+        "docker"
+    ] = tracked_field(
+        default="docker",
+        description="Execution environment type"
+    )
     docker: DockerSettings = DockerSettings()
 
 
@@ -59,12 +120,18 @@ class DatasetSettings(BaseSettings):
         env_prefix="DATASET__", 
         extra="ignore"
     )
-    cache_dir: Path = ROOT_DIR / "data" / "cache"
+    cache_dir: Path = untracked_field(
+        default=ROOT_DIR / "data" / "cache",
+        description="Local cache directory for downloaded datasets"
+    )
     dataset_name: Literal[
         "humaneval",
         "apps",
         "mbppplus"
-    ] = "mbppplus"
+    ] = tracked_field(
+        default="mbppplus",
+        description="Dataset to evaluate against"
+    )
 
 
 class LoggerSettings(BaseSettings):
@@ -72,8 +139,19 @@ class LoggerSettings(BaseSettings):
         env_prefix="LOG__", 
         extra="ignore"
     )
-    level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
-    log_file: Path | None = None
+    level: Literal[
+        "DEBUG", 
+        "INFO", 
+        "WARNING", 
+        "ERROR"
+    ] = untracked_field(
+        default="INFO",
+        description="Logging verbosity level"
+    )
+    log_file: Path | None = untracked_field(
+        default=None,
+        description="Path to log file, stdout only if not set"
+    )
 
 
 class ExperimentSettings(BaseSettings):
@@ -81,13 +159,22 @@ class ExperimentSettings(BaseSettings):
         env_prefix="EXPERIMENT__", 
         extra="ignore"
     )
-    experiment_id: str = "default"
-    max_turns: int = 1
+    experiment_id: str = tracked_field(
+        default="default",
+        description="Unique identifier for this experiment run"
+    )
+    max_turns: int = tracked_field(
+        default=1,
+        description="Max feedback iterations per episode"
+    )
     feedback_strategy: Literal[
         "minimal",
         "error_message",
         "progressive"
-    ] = "error_message"
+    ] = tracked_field(
+        default="error_message",
+        description="Strategy for constructing feedback prompts"
+    )
     @property
     def output_dir(self) -> Path:
         return ROOT_DIR / "experiments" / self.experiment_id
