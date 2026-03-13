@@ -33,8 +33,7 @@ class OpenAICompatibleLLM(BaseLLM):
 
             # 历史 Turn 有 llm_output，当前 Turn 还没有
             if t is not turn:
-                llm_output_file = t.llm_output_path / "response.txt"
-                messages.append({"role": "assistant", "content": llm_output_file.read_text(encoding="utf-8")})
+                messages.append({"role": "assistant", "content": t.llm_output_manifest.llm_output_file.read_text(encoding="utf-8")})
 
         settings = get_settings()
         response = await self.client.chat.completions.create(

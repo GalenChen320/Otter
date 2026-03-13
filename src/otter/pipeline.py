@@ -51,7 +51,7 @@ def get_pending_episodes(ds: dataset.BaseDataset) -> list[Episode]:
     episodes: list[Episode] = []
 
     for task_id in ds.task_ids:
-        for k in range(settings.llm.samples_per_problem):
+        for k in range(settings.experiment.samples_per_problem):
             eid = Episode.make_eid(task_id, k)
             ep_dir = output_dir / eid
             if eid in existing:
