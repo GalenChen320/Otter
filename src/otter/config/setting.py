@@ -39,6 +39,7 @@ class DockerSettings(BaseSettings):
     memory: str = "512m"
     memory_swap: str = "512m"
     memory_reservation: str = "256m"
+    network_mode: str = "none"
     device_read_bps: str | None = "128m"
     device_write_bps: str | None = "128m"
     timeout: int = 10
