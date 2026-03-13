@@ -2,8 +2,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-
-EXPERIMENT_META = "experiment.json"
+from otter.episode import Episode, EXPERIMENT_META
 
 
 @dataclass
@@ -74,30 +73,17 @@ class ExperimentSummary:
 
 
 def _load_episodes(experiment_dir: Path) -> list[EpisodeRecord]:
-    """从实验目录读取所有 episode 的轮次数据。"""
+    """从实验目录读取所有 episode 的轮次数据，复用 Episode.sync_all。"""
+    synced = Episode.sync_all(experiment_dir)
     episodes: list[EpisodeRecord] = []
 
-    for ep_dir in sorted(experiment_dir.iterdir()):
-        if not ep_dir.is_dir() or "#" not in ep_dir.name:
-            continue
-
-        task_id, sample_id_str = ep_dir.name.rsplit("#", 1)
-        sample_id = int(sample_id_str)
-
-        turns: list[bool | None] = []
-        turn_idx = 1
-        while True:
-            meta_path = ep_dir / f"turn_{turn_idx}" / "meta.json"
-            if not meta_path.exists():
-                break
-            meta = json.loads(meta_path.read_text(encoding="utf-8"))
-            turns.append(meta.get("passed"))
-            turn_idx += 1
-
+    for eid in sorted(synced):
+        ep = synced[eid]
+        turns = [t.passed for t in ep.turns]
         if turns:
             episodes.append(EpisodeRecord(
-                task_id=task_id,
-                sample_id=sample_id,
+                task_id=ep.task_id,
+                sample_id=ep.sample_id,
                 turns=turns,
             ))
 

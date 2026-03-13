@@ -5,10 +5,8 @@ from otter import dataset
 from otter import llm
 from otter import environment
 from otter.config.setting import get_settings, get_tracked_config
-from otter.episode import Episode
+from otter.episode import Episode, EXPERIMENT_META
 from otter.logger import get_logger
-
-EXPERIMENT_META = "experiment.json"
 
 
 def create_dataset() -> dataset.BaseDataset:
