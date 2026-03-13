@@ -1,0 +1,112 @@
+[English](../README.md) | **中文**
+
+<table>
+  <tr>
+    <td width="20%" align="center">
+      <img src="../assets/otter.jpg" width="100%" alt="logo">
+    </td>
+    <td valign="top" align="left">
+      <h1>Otter</h1>
+      <p>原生支持多轮反馈迭代的 LLM 代码能力评测框架。</p>
+    </td>
+  </tr>
+</table>
+
+## 为什么需要 Otter
+
+主流代码评测集采用快照式评估——给一次输入，出一次结果。但真实编程中，开发者会根据编译错误、测试失败等反馈反复修改代码。**这个反馈驱动的迭代过程才是编程能力的核心体现。**
+
+Otter 将环境反馈集成进评测流程，让 LLM 像真实开发者一样：写代码 → 运行 → 看报错 → 修改 → 再运行，直到通过或达到最大轮次。
+
+```
+      ┌──────────── Feedback ────────────┐
+      │                                  │
+      ↓                                  │
+   Prompt ──→ LLM ──→ Code ──→ Environment ──→ 通过？──→ 结束
+                                                 │
+                                                 └─→ 未通过，继续循环
+```
+
+## 快速开始
+
+**前置要求**：Python >= 3.11，Docker
+
+```bash
+# 安装
+pip install -e .
+
+# 配置
+cp .env.example .env
+# 编辑 .env，填入你的 LLM API 信息
+
+# 运行评测
+otter run
+```
+
+## 配置
+
+所有参数通过 `.env` 文件管理。CLI 仅接受 `--env` 参数选择配置文件：
+
+```bash
+otter run              # 默认使用 .env
+otter run --env .env.local  # 指定配置文件
+```
+
+### 必填项
+
+```ini
+LLM__api_key=sk-xxx
+LLM__base_url=https://api.openai.com/v1
+LLM__model=gpt-4o
+```
+
+### 可选项
+
+| 环境变量 | 默认值 | 说明 |
+|---|---|---|
+| `LLM__llm_type` | `openai_compatible` | LLM 接口类型 |
+| `LLM__concurrency` | `1` | LLM 并发请求数 |
+| `LLM__samples_per_problem` | `1` | 每道题独立采样次数 |
+| `LLM__max_retries` | `3` | API 调用失败重试次数 |
+| `LLM__retry_base_delay` | `1.0` | 重试退避基础延迟（秒） |
+| `EXPERIMENT__experiment_id` | `default` | 实验 ID，结果存入 `experiments/{id}/` |
+| `EXPERIMENT__max_turns` | `1` | 最大反馈迭代轮次 |
+| `EXPERIMENT__feedback_strategy` | `error_message` | 反馈策略（`minimal` / `error_message` / `progressive`） |
+| `DATASET__dataset_name` | `mbppplus` | 数据集（`mbppplus` / `humaneval` / `apps`） |
+| `DATASET__cache_dir` | `data/cache` | 数据集缓存目录 |
+| `DOCKER__cpus` | `1.0` | 容器 CPU 限制 |
+| `DOCKER__memory` | `512m` | 容器内存限制 |
+| `DOCKER__network_mode` | `none` | 容器网络模式 |
+| `DOCKER__timeout` | `10` | 单条命令执行超时（秒） |
+| `LOG__level` | `INFO` | 日志级别 |
+| `LOG__log_file` | 无 | 日志文件路径 |
+
+## 输出结构
+
+每次运行的结果以目录结构保存在 `experiments/` 下，每道题的每轮尝试都有完整记录：
+
+```
+experiments/{experiment_id}/
+└── {task_id}#{sample_id}/
+    ├── turn_1/
+    │   ├── llm_input/    # 发给 LLM 的 prompt
+    │   ├── llm_output/   # LLM 返回的原始响应
+    │   ├── env_input/    # 实际执行的代码脚本
+    │   ├── env_output/   # 执行结果（stdout/stderr/returncode）
+    │   └── meta.json     # 本轮判定结果 {"passed": true/false}
+    ├── turn_2/           # 第二轮（如果第一轮未通过且 max_turns > 1）
+    │   └── ...
+    └── ...
+```
+
+## 支持的数据集
+
+| 数据集 | 状态 | 说明 |
+|---|---|---|
+| [MBPP+](https://huggingface.co/datasets/evalplus/mbppplus) | 完整支持 | 函数级 Python 编程题 |
+| HumanEval | 开发中 | 函数级 Python 编程题 |
+| APPS | 开发中 | 竞赛级编程题 |
+
+## 许可证
+
+[Apache License 2.0](LICENSE)
