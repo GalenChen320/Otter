@@ -20,12 +20,11 @@ def run(
         typer.echo(f"Error: env file not found: {env}", err=True)
         raise typer.Exit(1)
 
-    from otter.config.setting import set_env_file, init_settings
+    from otter.config.setting import init_settings
     from otter.logger import init_logger
     from otter.pipeline import main
 
-    set_env_file(str(env))
-    init_settings()
+    init_settings(str(env))
     init_logger()
     asyncio.run(main())
 

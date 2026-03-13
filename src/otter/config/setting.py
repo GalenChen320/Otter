@@ -6,8 +6,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT_DIR = Path(__file__).parent.parent.parent.parent
 
-_env_file: str = ".env"
-
 
 def tracked_field(default=..., **kwargs) -> Any:
     extra = kwargs.pop("json_schema_extra", {})
@@ -17,11 +15,6 @@ def tracked_field(default=..., **kwargs) -> Any:
 def untracked_field(default=..., **kwargs) -> Any:
     extra = kwargs.pop("json_schema_extra", {})
     return Field(default, json_schema_extra={"core": False, **extra}, **kwargs)
-
-
-def set_env_file(path: str) -> None:
-    global _env_file
-    _env_file = path
 
 
 class LLMSettings(BaseSettings):
@@ -198,14 +191,14 @@ def get_settings() -> Settings:
     return _settings
 
 
-def init_settings() -> Settings:
+def init_settings(env_file: str = ".env") -> Settings:
     global _settings
-    _settings = _build_settings()
+    _settings = _build_settings(env_file)
     return _settings
 
 
-def _build_settings() -> Settings:
-    env = (ROOT_DIR / _env_file).resolve()
+def _build_settings(env_file: str) -> Settings:
+    env = (ROOT_DIR / env_file).resolve()
     return Settings(
         dataset=DatasetSettings(_env_file=env),
         llm=LLMSettings(_env_file=env),
