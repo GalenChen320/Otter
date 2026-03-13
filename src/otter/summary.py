@@ -176,30 +176,47 @@ def summarize(experiment_dir: Path) -> ExperimentSummary:
     )
 
 
-def format_summary(result: ExperimentSummary) -> str:
-    """将 ExperimentSummary 格式化为可读文本。"""
-    lines: list[str] = []
-    lines.append(f"Experiment: {result.experiment_id}")
-    lines.append(f"Max turns:  {result.max_turns}")
-    lines.append("")
+def show_summary(result: ExperimentSummary) -> None:
+    """用 rich 输出 ExperimentSummary。"""
+    from rich.console import Console
+    from rich.table import Table
+    from rich.panel import Panel
+    from rich.text import Text
+    from rich import box as rich_box
+
+    console = Console()
+
+    # 实验信息
+    header = Text()
+    header.append("Experiment: ", style="bold")
+    header.append(f"{result.experiment_id}\n")
+    header.append("Max turns:  ", style="bold")
+    header.append(f"{result.max_turns}")
+    console.print(Panel(header, border_style="blue", expand=False))
 
     for sample in result.samples:
         if len(result.samples) > 1:
-            lines.append(f"── Sample {sample.sample_id} ──")
+            console.print()
+            console.print(f"[bold cyan]── Sample {sample.sample_id} ──[/]")
 
-        total = sample.turn_stats[0].total if sample.turn_stats else 0
-        lines.append(f"Total episodes: {total}")
-        lines.append("")
-
-        lines.append(f"  {'Turn':<6} {'Passed':<22} {'Completed':<22} {'Pending':<22}")
-        lines.append(f"  {'─' * 6} {'─' * 22} {'─' * 22} {'─' * 22}")
+        table = Table(show_header=True, header_style="bold", box=rich_box.ROUNDED, padding=(0, 2))
+        table.add_column("Turn",      justify="center", style="bold")
+        table.add_column("Passed",    justify="right",  style="green")
+        table.add_column("Completed", justify="right",  style="blue")
+        table.add_column("Pending",   justify="right")  # 行内动态控制样式
 
         for ts in sample.turn_stats:
-            passed = f"{ts.passed}/{ts.total} ({ts.pass_rate:.1%})"
-            completed = f"{ts.completed}/{ts.total} ({ts.completed_rate:.1%})"
-            pending = f"{ts.pending}/{ts.total} ({ts.pending_rate:.1%})"
-            lines.append(f"  {ts.turn:<6} {passed:<22} {completed:<22} {pending:<22}")
+            passed    = f"{ts.passed}/{ts.total} ({ts.pass_rate:.2%})"
+            completed = f"{ts.completed}/{ts.total} ({ts.completed_rate:.2%})"
+            pending   = f"{ts.pending}/{ts.total} ({ts.pending_rate:.2%})"
 
-        lines.append("")
+            pending_style = "dim" if ts.pending == 0 else "yellow"
+            table.add_row(
+                str(ts.turn),
+                passed,
+                completed,
+                f"[{pending_style}]{pending}[/]",
+            )
 
-    return "\n".join(lines)
+        console.print(table)
+        console.print()
