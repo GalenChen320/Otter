@@ -67,23 +67,23 @@ class DockerSettings(BaseSettings):
         env_prefix="DOCKER__",
         extra="ignore"
     )
-    cpus: float = tracked_field(
+    cpus: float | None = tracked_field(
         default=1.0,
         description="CPU cores allocated per container"
     )
-    memory: str = tracked_field(
+    memory: str | None = tracked_field(
         default="512m",
         description="Memory limit per container"
     )
-    memory_swap: str = tracked_field(
+    memory_swap: str | None = tracked_field(
         default="512m",
         description="Swap limit per container"
     )
-    memory_reservation: str = tracked_field(
+    memory_reservation: str | None = tracked_field(
         default="256m",
         description="Soft memory limit per container"
     )
-    network_mode: str = tracked_field(
+    network_mode: str | None = tracked_field(
         default="none",
         description="Container network mode"
     )
