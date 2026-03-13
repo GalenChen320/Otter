@@ -64,7 +64,7 @@ def summary(
 
     exp_dir = _resolve_experiment_dir(experiment_id)
     result = summarize(exp_dir)
-    typer.echo(show_summary(result))
+    show_summary(result)
 
 
 @app.command()
