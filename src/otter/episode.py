@@ -39,6 +39,13 @@ class BaseManifest:
                 kwargs[key] = val
         return cls(**kwargs)
 
+    def save(self, directory: Path) -> None:
+        """将自身序列化写入 directory/manifest.json。"""
+        (directory / "manifest.json").write_text(
+            json.dumps(self.to_dict(), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
 @dataclass
 class LLMInputManifest(BaseManifest):
     """LLM 输入侧的句柄。Dataset 写入，LLM 读取。"""

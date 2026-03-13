@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
-import json
 from pathlib import Path
 
-from otter.episode import BaseManifest, EnvInputManifest, Episode, LLMInputManifest
+from otter.episode import EnvInputManifest, Episode, LLMInputManifest
 
 
 class BaseDataset(ABC):
@@ -56,14 +55,6 @@ class BaseDataset(ABC):
 
     # ── Pipeline 编排接口 ──
 
-    @staticmethod
-    def _save_manifest(directory: Path, manifest: BaseManifest) -> None:
-        """将 manifest 序列化写入目录下的 manifest.json。"""
-        (directory / "manifest.json").write_text(
-            json.dumps(manifest.to_dict(), ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-
     @abstractmethod
     def _prepare_llm_input(self, episode: Episode) -> LLMInputManifest:
         """子类实现：写入 LLM 输入文件，返回 LLMInputManifest。"""
@@ -76,16 +67,16 @@ class BaseDataset(ABC):
 
     def prepare_llm_input(self, episode: Episode) -> None:
         """模板方法：调用子类 _prepare_llm_input，保存 manifest，设置 turn。"""
-        turn = episode.turns[-1]
         manifest = self._prepare_llm_input(episode)
-        self._save_manifest(turn.llm_input_path, manifest)
+        turn = episode.turns[-1]
+        manifest.save(turn.llm_input_path)
         turn.llm_input_manifest = manifest
 
     def prepare_env_input(self, episode: Episode) -> None:
         """模板方法：调用子类 _prepare_env_input，保存 manifest，设置 turn。"""
-        turn = episode.turns[-1]
         manifest = self._prepare_env_input(episode)
-        self._save_manifest(turn.env_input_path, manifest)
+        turn = episode.turns[-1]
+        manifest.save(turn.env_input_path)
         turn.env_input_manifest = manifest
 
     @abstractmethod
