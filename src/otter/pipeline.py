@@ -1,11 +1,14 @@
 import asyncio
+import json
 
 from otter import dataset
 from otter import llm
 from otter import environment
-from otter.config.setting import get_settings
+from otter.config.setting import get_settings, get_tracked_config
 from otter.episode import Episode
 from otter.logger import get_logger
+
+EXPERIMENT_META = "experiment.json"
 
 
 def create_dataset() -> dataset.BaseDataset:
@@ -111,9 +114,44 @@ async def run(
     return episodes
 
 
+def verify_or_create_experiment_meta(output_dir) -> None:
+    """首次运行写入 experiment.json，续跑时校验 tracked 参数一致性。"""
+    logger = get_logger()
+    meta_path = output_dir / EXPERIMENT_META
+    current = get_tracked_config()
+
+    if not meta_path.exists():
+        output_dir.mkdir(parents=True, exist_ok=True)
+        meta_path.write_text(
+            json.dumps(current, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        logger.info("created experiment meta: %s", meta_path)
+        return
+
+    saved = json.loads(meta_path.read_text(encoding="utf-8"))
+    diffs: list[str] = []
+    all_keys = set(saved) | set(current)
+    for key in sorted(all_keys):
+        old_val = saved.get(key)
+        new_val = current.get(key)
+        if old_val != new_val:
+            diffs.append(f"  {key}: {old_val!r} -> {new_val!r}")
+
+    if diffs:
+        raise RuntimeError(
+            "Tracked config mismatch with existing experiment. "
+            "Use a new experiment_id or fix your config.\n" + "\n".join(diffs)
+        )
+    logger.info("experiment meta verified: %s", meta_path)
+
+
 async def main():
     settings = get_settings()
     logger = get_logger()
+
+    verify_or_create_experiment_meta(settings.experiment.output_dir)
+
     ds = create_dataset()
     ds.load()
 

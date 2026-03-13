@@ -216,3 +216,25 @@ def _build_settings() -> Settings:
         ),
         experiment=ExperimentSettings(_env_file=env),
     )
+
+
+def _collect_tracked(obj: BaseSettings, prefix: str = "") -> dict[str, Any]:
+    """递归收集标记为 core=True 的字段，返回扁平 dict。"""
+    result: dict[str, Any] = {}
+    for name, field_info in type(obj).model_fields.items():
+        key = f"{prefix}{name}" if prefix else name
+        value = getattr(obj, name)
+        if isinstance(value, BaseSettings):
+            result.update(_collect_tracked(value, f"{key}."))
+        elif field_info.json_schema_extra and field_info.json_schema_extra.get("core"):
+            result[key] = value
+    return result
+
+
+def get_tracked_config(settings: Settings | None = None) -> dict[str, Any]:
+    """提取当前配置中所有 tracked 字段，返回可序列化的扁平 dict。"""
+    if settings is None:
+        settings = get_settings()
+    raw = _collect_tracked(settings)
+    # Path 等类型转 str 以便 JSON 序列化
+    return {k: str(v) if isinstance(v, Path) else v for k, v in raw.items()}
