@@ -1,11 +1,18 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, fields, field
 from pathlib import Path
 import json
 import shutil
 
 @dataclass
 class BaseManifest:
-    pass
+    def to_dict(self) -> dict:
+        result = {}
+        for f in fields(self):
+            val = getattr(self, f.name)
+            if isinstance(val, Path):
+                val = str(val)
+            result[f.name] = val
+        return result
 
 @dataclass
 class LLMInputManifest(BaseManifest):
