@@ -164,6 +164,12 @@ class Episode:
         if not output_dir.exists():
             return episodes
 
+        def _load_manifest(directory: Path, manifest_cls):
+            mf = directory / "manifest.json"
+            if mf.exists():
+                return manifest_cls.from_dict(json.loads(mf.read_text(encoding="utf-8")))
+            return None
+
         for ep_dir in sorted(output_dir.iterdir()):
             if not ep_dir.is_dir() or "#" not in ep_dir.name:
                 continue
@@ -190,12 +196,6 @@ class Episode:
                 env_output_dir = turn_dir / "env_output"
 
                 meta = json.loads(meta_path.read_text(encoding="utf-8"))
-
-                def _load_manifest(directory: Path, manifest_cls):
-                    mf = directory / "manifest.json"
-                    if mf.exists():
-                        return manifest_cls.from_dict(json.loads(mf.read_text(encoding="utf-8")))
-                    return None
 
                 turns.append(Turn(
                     llm_input_path=llm_input_dir if llm_input_dir.exists() else None,

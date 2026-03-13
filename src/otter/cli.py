@@ -70,7 +70,8 @@ def summary(
 @app.command()
 def version():
     """查看版本"""
-    typer.echo("Otter v0.1.0")
+    from importlib.metadata import version as get_version
+    typer.echo(f"Otter v{get_version('otter')}")
 
 
 if __name__ == "__main__":
