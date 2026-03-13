@@ -1,7 +1,19 @@
 from dataclasses import dataclass, fields, field
 from pathlib import Path
+from typing import get_type_hints, get_args
 import json
 import shutil
+
+
+def _is_path_field(hint) -> bool:
+    """判断类型注解是否包含 Path（支持 Path | None 等联合类型）。"""
+    if hint is Path:
+        return True
+    for arg in get_args(hint):
+        if arg is Path:
+            return True
+    return False
+
 
 @dataclass
 class BaseManifest:
@@ -13,6 +25,19 @@ class BaseManifest:
                 val = str(val)
             result[f.name] = val
         return result
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "BaseManifest":
+        hints = get_type_hints(cls)
+        kwargs = {}
+        for key, val in data.items():
+            if key not in hints:
+                continue
+            if val is not None and _is_path_field(hints[key]):
+                kwargs[key] = Path(val)
+            else:
+                kwargs[key] = val
+        return cls(**kwargs)
 
 @dataclass
 class LLMInputManifest(BaseManifest):
@@ -159,12 +184,22 @@ class Episode:
 
                 meta = json.loads(meta_path.read_text(encoding="utf-8"))
 
+                def _load_manifest(directory: Path, manifest_cls):
+                    mf = directory / "manifest.json"
+                    if mf.exists():
+                        return manifest_cls.from_dict(json.loads(mf.read_text(encoding="utf-8")))
+                    return None
+
                 turns.append(Turn(
                     llm_input_path=llm_input_dir if llm_input_dir.exists() else None,
                     llm_output_path=llm_output_dir if llm_output_dir.exists() else None,
                     env_input_path=env_input_dir if env_input_dir.exists() else None,
                     env_output_path=env_output_dir if env_output_dir.exists() else None,
                     passed=meta.get("passed"),
+                    llm_input_manifest=_load_manifest(llm_input_dir, LLMInputManifest),
+                    llm_output_manifest=_load_manifest(llm_output_dir, LLMOutputManifest),
+                    env_input_manifest=_load_manifest(env_input_dir, EnvInputManifest),
+                    env_output_manifest=_load_manifest(env_output_dir, EnvOutputManifest),
                 ))
 
             episodes[eid] = Episode(
