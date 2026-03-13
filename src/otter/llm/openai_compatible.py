@@ -1,5 +1,3 @@
-import json
-
 from openai import AsyncOpenAI
 from .base import BaseLLM
 
@@ -19,7 +17,7 @@ class OpenAICompatibleLLM(BaseLLM):
             base_url=settings.llm.base_url,
         )
 
-    async def _generate(self, episode: Episode) -> None:
+    async def _generate(self, episode: Episode) -> LLMOutputManifest:
         turn = episode.turns[-1]
         input_manifest = turn.llm_input_manifest
 
@@ -49,10 +47,4 @@ class OpenAICompatibleLLM(BaseLLM):
         llm_output_file = turn.llm_output_path / "response.txt"
         llm_output_file.write_text(content, encoding="utf-8")
 
-        # 写 manifest.json
-        manifest = LLMOutputManifest(llm_output_file=llm_output_file)
-        (turn.llm_output_path / "manifest.json").write_text(
-            json.dumps({"llm_output_file": str(llm_output_file)}),
-            encoding="utf-8",
-        )
-        turn.llm_output_manifest = manifest
+        return LLMOutputManifest(llm_output_file=llm_output_file)

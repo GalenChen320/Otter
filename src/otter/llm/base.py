@@ -2,7 +2,7 @@ import asyncio
 from abc import ABC, abstractmethod
 
 from otter.config.setting import get_settings
-from otter.episode import Episode
+from otter.episode import Episode, LLMOutputManifest
 from otter.logger import get_logger
 
 
@@ -14,7 +14,10 @@ class BaseLLM(ABC):
         last_exc: Exception | None = None
         for attempt in range(1, settings.llm.max_retries + 1):
             try:
-                await self._generate(episode)
+                manifest = await self._generate(episode)
+                turn = episode.turns[-1]
+                manifest.save(turn.llm_output_path)
+                turn.llm_output_manifest = manifest
                 logger.info("attempt %d/%d succeeded", attempt, settings.llm.max_retries)
                 return
             except Exception as e:
@@ -30,5 +33,5 @@ class BaseLLM(ABC):
         raise last_exc
 
     @abstractmethod
-    async def _generate(self, episode: Episode) -> None:
+    async def _generate(self, episode: Episode) -> LLMOutputManifest:
         pass

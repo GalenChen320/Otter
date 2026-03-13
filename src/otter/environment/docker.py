@@ -1,6 +1,4 @@
 import asyncio
-import json
-import tempfile
 from uuid import uuid4
 from pathlib import Path
 
@@ -66,8 +64,8 @@ class DockerEnvironment(BaseEnvironment):
         """删除镜像。"""
         await remove_image(image_tag, missing_ok=missing_ok)
 
-    async def execute(self, episode: Episode) -> None:
-        """从 env_input_manifest 读取执行规格，创建容器执行，写入 env_output_manifest。"""
+    async def _execute(self, episode: Episode) -> EnvOutputManifest:
+        """从 env_input_manifest 读取执行规格，创建容器执行，返回 EnvOutputManifest。"""
         turn = episode.turns[-1]
         manifest = turn.env_input_manifest
 
@@ -99,15 +97,13 @@ class DockerEnvironment(BaseEnvironment):
                         exec_container(container_name, cmd), timeout=timeout,
                     )
                 except asyncio.TimeoutError:
-                    self._write_env_output(turn, env_output_dir, "", f"Command timed out after {timeout}s: {cmd}", -1, True)
-                    return
+                    return self._make_env_output(env_output_dir, "", f"Command timed out after {timeout}s: {cmd}", -1, True)
                 if last_result.returncode != 0:
-                    self._write_env_output(turn, env_output_dir, last_result.stdout, last_result.stderr, last_result.returncode, False)
-                    return
+                    return self._make_env_output(env_output_dir, last_result.stdout, last_result.stderr, last_result.returncode, False)
 
             # 成功
-            self._write_env_output(
-                turn, env_output_dir,
+            return self._make_env_output(
+                env_output_dir,
                 last_result.stdout if last_result else "",
                 last_result.stderr if last_result else "",
                 last_result.returncode if last_result else 0,
@@ -115,33 +111,23 @@ class DockerEnvironment(BaseEnvironment):
             )
 
         except Exception as e:
-            self._write_env_output(turn, env_output_dir, "", str(e), -1, False)
+            return self._make_env_output(env_output_dir, "", str(e), -1, False)
 
         finally:
             await remove_container(container_name, force=True, missing_ok=True)
 
     @staticmethod
-    def _write_env_output(turn, env_output_dir: Path, stdout: str, stderr: str, returncode: int, timed_out: bool) -> None:
-        """写入 env_output 文件和 manifest。"""
+    def _make_env_output(env_output_dir: Path, stdout: str, stderr: str, returncode: int, timed_out: bool) -> EnvOutputManifest:
+        """写入 stdout/stderr 文件，返回 EnvOutputManifest。"""
         stdout_file = env_output_dir / "stdout.txt"
         stderr_file = env_output_dir / "stderr.txt"
 
         stdout_file.write_text(stdout, encoding="utf-8")
         stderr_file.write_text(stderr, encoding="utf-8")
 
-        manifest = EnvOutputManifest(
+        return EnvOutputManifest(
             stdout_file=stdout_file,
             stderr_file=stderr_file,
             returncode=returncode,
             timed_out=timed_out,
         )
-        (env_output_dir / "manifest.json").write_text(
-            json.dumps({
-                "stdout_file": str(stdout_file),
-                "stderr_file": str(stderr_file),
-                "returncode": returncode,
-                "timed_out": timed_out,
-            }, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        turn.env_output_manifest = manifest
