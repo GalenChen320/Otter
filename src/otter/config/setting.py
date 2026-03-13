@@ -42,7 +42,7 @@ class LLMSettings(BaseSettings):
         description="Max concurrent LLM requests"
     )
     max_retries: int = tracked_field(
-        default=3,
+        default=3, ge=1,
         description="Max retries on API failure"
     )
     retry_base_delay: float = tracked_field(
@@ -100,6 +100,10 @@ class EnvironmentSettings(BaseSettings):
     ] = tracked_field(
         default="docker",
         description="Execution environment type"
+    )
+    concurrency: int = untracked_field(
+        default=1,
+        description="Max concurrent environment executions"
     )
     docker: DockerSettings = DockerSettings()
 

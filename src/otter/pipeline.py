@@ -68,7 +68,8 @@ async def run_turn(
     llm_client: llm.BaseLLM,
     env_client: environment.BaseEnvironment,
     ep: Episode,
-    semaphore: asyncio.Semaphore,
+    llm_semaphore: asyncio.Semaphore,
+    env_semaphore: asyncio.Semaphore,
 ) -> None:
     """执行单轮：创建 Turn → prepare → generate → prepare → execute → judge。"""
     logger = get_logger()
@@ -77,12 +78,13 @@ async def run_turn(
     ds.prepare_llm_input(ep)
 
     logger.info("[%s] turn %d queued", ep.eid, ep.total_turns)
-    async with semaphore:
+    async with llm_semaphore:
         logger.info("[%s] turn %d generating", ep.eid, ep.total_turns)
         await llm_client.generate(ep)
 
     ds.prepare_env_input(ep)
-    await env_client.execute(ep)
+    async with env_semaphore:
+        await env_client.execute(ep)
     await ds.make_judgement(ep)
 
     logger.info("[%s] turn %d completed (passed=%s)",
@@ -96,7 +98,8 @@ async def run(
 ) -> list[Episode]:
     settings = get_settings()
     logger = get_logger()
-    semaphore = asyncio.Semaphore(settings.llm.concurrency)
+    llm_semaphore = asyncio.Semaphore(settings.llm.concurrency)
+    env_semaphore = asyncio.Semaphore(settings.environment.concurrency)
     max_turns = settings.experiment.max_turns
     episodes = get_pending_episodes(ds)
     logger.info("starting run: %d episodes to process", len(episodes))
@@ -104,7 +107,7 @@ async def run(
     async def process(ep: Episode):
         async with ds.episode_context(ep):
             while not ep.resolved and not ep.exhausted(max_turns):
-                await run_turn(ds, llm_client, env_client, ep, semaphore)
+                await run_turn(ds, llm_client, env_client, ep, llm_semaphore, env_semaphore)
 
     await asyncio.gather(*[process(ep) for ep in episodes])
     resolved = sum(1 for ep in episodes if ep.resolved)
