@@ -62,6 +62,31 @@ def get_pending_episodes(ds: dataset.BaseDataset) -> list[Episode]:
     return episodes
 
 
+async def run_turn(
+    ds: dataset.BaseDataset,
+    llm_client: llm.BaseLLM,
+    env_client: environment.BaseEnvironment,
+    ep: Episode,
+    semaphore: asyncio.Semaphore,
+) -> None:
+    """执行单轮：创建 Turn → prepare → generate → prepare → execute → judge。"""
+    logger = get_logger()
+    ep.next_turn()
+    logger.info("[%s] turn %d started", ep.eid, ep.total_turns)
+
+    ds.prepare_llm_input(ep)
+
+    async with semaphore:
+        await llm_client.generate(ep)
+
+    ds.prepare_env_input(ep)
+    await env_client.execute(ep)
+    await ds.make_judgement(ep)
+
+    logger.info("[%s] turn %d completed (passed=%s)",
+                ep.eid, ep.total_turns, ep.turns[-1].passed)
+
+
 async def run(
     ds: dataset.BaseDataset,
     llm_client: llm.BaseLLM,
@@ -69,35 +94,15 @@ async def run(
 ) -> list[Episode]:
     settings = get_settings()
     logger = get_logger()
-    gen_semaphore = asyncio.Semaphore(settings.llm.concurrency)
+    semaphore = asyncio.Semaphore(settings.llm.concurrency)
+    max_turns = settings.experiment.max_turns
     episodes = get_pending_episodes(ds)
     logger.info("starting run: %d episodes to process", len(episodes))
 
     async def process(ep: Episode):
-        async with gen_semaphore:
-            logger.info("[%s] processing (turn %d)", ep.eid, ep.total_turns + 1)
-
-            async with ds.episode_context(ep):
-                # 1. 创建新 Turn
-                ep.next_turn()
-
-                # 2. Dataset 准备 LLM 输入（写文件 + 设置 turn.llm_input_manifest）
-                ds.prepare_llm_input(ep)
-
-                # 3. LLM 生成（读 llm_input_manifest，写 llm_output 文件 + 设置 turn.llm_output_manifest）
-                await llm_client.generate(ep)
-
-                # 4. Dataset 构建执行规格（读 llm_output_manifest，写执行文件 + 设置 turn.env_input_manifest）
-                ds.prepare_env_input(ep)
-
-                # 5. Environment 执行（读 env_input_manifest，写 env_output 文件 + 设置 turn.env_output_manifest）
-                await env_client.execute(ep)
-
-                # 6. Dataset 判定（读 env_output_manifest，更新 turn.passed，保存 meta）
-                await ds.make_judgement(ep)
-
-            logger.info("[%s] turn %d completed (passed=%s)",
-                        ep.eid, ep.total_turns, ep.turns[-1].passed)
+        async with ds.episode_context(ep):
+            while not ep.resolved and not ep.exhausted(max_turns):
+                await run_turn(ds, llm_client, env_client, ep, semaphore)
 
     await asyncio.gather(*[process(ep) for ep in episodes])
     resolved = sum(1 for ep in episodes if ep.resolved)
