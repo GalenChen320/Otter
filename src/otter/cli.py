@@ -60,11 +60,11 @@ def summary(
     experiment_id: Annotated[Optional[str], typer.Option("--exp", help="实验 ID")] = None,
 ):
     """查看评测结果摘要"""
-    from otter.summary import summarize, format_summary
+    from otter.summary import summarize, show_summary
 
     exp_dir = _resolve_experiment_dir(experiment_id)
     result = summarize(exp_dir)
-    typer.echo(format_summary(result))
+    typer.echo(show_summary(result))
 
 
 @app.command()
