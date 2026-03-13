@@ -37,6 +37,7 @@ class DockerEnvironment(BaseEnvironment):
         self._container_params: dict = {
             "stdin_open": True,
             "tty": True,
+            "network_mode": docker_cfg.network_mode,
             "nano_cpus": int(docker_cfg.cpus * 1e9),
             "mem_limit": docker_cfg.memory,
             "memswap_limit": docker_cfg.memory_swap,
