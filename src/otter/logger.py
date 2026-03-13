@@ -22,20 +22,29 @@ def init_logger() -> logging.Logger:
 
 
 def _build_logger() -> logging.Logger:
-    settings = get_settings()
     lg = logging.getLogger("main")
-    lg.setLevel(settings.log.level)
     lg.handlers.clear()
 
     formatter = logging.Formatter(_LOG_FORMAT)
+
+    try:
+        settings = get_settings()
+        level = settings.log.level
+        log_file = settings.log.log_file
+    except RuntimeError:
+        # settings 未初始化时使用默认值（如 summary 命令）
+        level = "WARNING"
+        log_file = None
+
+    lg.setLevel(level)
 
     console = logging.StreamHandler(sys.stderr)
     console.setFormatter(formatter)
     lg.addHandler(console)
 
-    if settings.log.log_file is not None:
-        settings.log.log_file.parent.mkdir(parents=True, exist_ok=True)
-        file_handler = logging.FileHandler(settings.log.log_file, encoding="utf-8")
+    if log_file is not None:
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(log_file, encoding="utf-8")
         file_handler.setFormatter(formatter)
         lg.addHandler(file_handler)
 

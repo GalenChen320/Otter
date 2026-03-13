@@ -77,6 +77,7 @@ class EnvOutputManifest(BaseManifest):
 
 
 META_FILENAME = "meta.json"
+EXPERIMENT_META = "experiment.json"
 
 
 @dataclass
