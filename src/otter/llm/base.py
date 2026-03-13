@@ -30,7 +30,9 @@ class BaseLLM(ABC):
                     delay = settings.llm.retry_base_delay * (2 ** (attempt - 1))
                     await asyncio.sleep(delay)
         logger.error("all %d attempts failed: %s", settings.llm.max_retries, last_exc)
-        raise last_exc
+        raise RuntimeError(
+            f"LLM generation failed after {settings.llm.max_retries} attempts"
+        ) from last_exc
 
     @abstractmethod
     async def _generate(self, episode: Episode) -> LLMOutputManifest:

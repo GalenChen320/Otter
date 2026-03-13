@@ -105,9 +105,12 @@ async def run(
     logger.info("starting run: %d episodes to process", len(episodes))
 
     async def process(ep: Episode):
-        async with ds.episode_context(ep):
-            while not ep.resolved and not ep.exhausted(max_turns):
-                await run_turn(ds, llm_client, env_client, ep, llm_semaphore, env_semaphore)
+        try:
+            async with ds.episode_context(ep):
+                while not ep.resolved and not ep.exhausted(max_turns):
+                    await run_turn(ds, llm_client, env_client, ep, llm_semaphore, env_semaphore)
+        except Exception as e:
+            logger.error("[%s] episode failed: %s", ep.eid, e)
 
     await asyncio.gather(*[process(ep) for ep in episodes])
     resolved = sum(1 for ep in episodes if ep.resolved)
