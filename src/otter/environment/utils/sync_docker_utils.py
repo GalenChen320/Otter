@@ -454,7 +454,7 @@ def sync_copy_from_container(
             for chunk in bits:
                 f.write(chunk)
         with tarfile.open(tmp_path, "r") as tar:
-            tar.extractall(dst)
+            tar.extractall(dst, filter="data")
 
 
 __all__ = [
