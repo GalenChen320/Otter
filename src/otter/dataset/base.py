@@ -56,17 +56,17 @@ class BaseDataset(ABC):
         """子类实现：写入 LLM 输入文件，返回 LLMInputManifest。"""
         ...
 
-    @abstractmethod
-    def _prepare_env_input(self, episode: Episode) -> EnvInputManifest:
-        """子类实现：从 turn.llm_output_manifest 读取响应，写入执行文件，返回 EnvInputManifest。"""
-        ...
-
     def prepare_llm_input(self, episode: Episode) -> None:
         """模板方法：调用子类 _prepare_llm_input，保存 manifest，设置 turn。"""
         manifest = self._prepare_llm_input(episode)
         turn = episode.turns[-1]
         manifest.save(turn.llm_input_path)
         turn.llm_input_manifest = manifest
+
+    @abstractmethod
+    def _prepare_env_input(self, episode: Episode) -> EnvInputManifest:
+        """子类实现：从 turn.llm_output_manifest 读取响应，写入执行文件，返回 EnvInputManifest。"""
+        ...
 
     def prepare_env_input(self, episode: Episode) -> None:
         """模板方法：调用子类 _prepare_env_input，保存 manifest，设置 turn。"""
