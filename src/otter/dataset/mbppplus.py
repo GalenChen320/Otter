@@ -1,8 +1,8 @@
-import re
 from dataclasses import dataclass
 from datasets import load_dataset
 
 from otter.dataset.base import BaseDataset
+from otter.dataset.utils import extract_code
 from otter.config.setting import get_settings
 from otter.episode import Episode, EnvInputManifest, LLMInputManifest
 from otter.environment.docker import DockerEnvironment
@@ -71,14 +71,6 @@ class MBPPPlusDataset(BaseDataset):
             f"Any import of a non-standard library will cause a runtime error."
         )
 
-    def _extract_code(self, response: str) -> str:
-        """从 LLM response 中提取 Python 代码块。"""
-        pattern = r"```(?:python)?\s*\n(.*?)```"
-        match = re.search(pattern, response, re.DOTALL)
-        if match:
-            return match.group(1).strip()
-        return response.strip()
-
     def _prepare_llm_input(self, episode: Episode) -> LLMInputManifest:
         turn = episode.turns[-1]
 
@@ -104,7 +96,7 @@ class MBPPPlusDataset(BaseDataset):
         response = llm_output_manifest.llm_output_file.read_text(encoding="utf-8")
 
         # 提取代码，拼接测试，写入脚本文件
-        code = self._extract_code(response)
+        code = extract_code(response)
         problem = self._problems[episode.task_id]
         imports = "\n".join(problem.extra_imports)
         full_code = f"{imports}\n\n{code}\n\n{problem.official_tests}"
