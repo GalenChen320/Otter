@@ -105,11 +105,15 @@ EXPERIMENT_META = "experiment.json"
 
 @dataclass
 class Turn:
+    prop_input_path: Path | None = None
+    prop_output_path: Path | None = None
     exec_input_path: Path | None = None
     exec_output_path: Path | None = None
     eval_input_path: Path | None = None
     eval_output_path: Path | None = None
     passed: bool | None = None
+    prop_input_manifest: PropInputManifest | None = None
+    prop_output_manifest: PropOutputManifest | None = None
     exec_input_manifest: ExecInputManifest | None = None
     exec_output_manifest: ExecOutputManifest | None = None
     eval_input_manifest: EvalInputManifest | None = None
@@ -117,8 +121,9 @@ class Turn:
 
     @property
     def turn_dir(self) -> Path | None:
-        if self.exec_input_path:
-            return self.exec_input_path.parent
+        for p in (self.prop_input_path, self.exec_input_path):
+            if p is not None:
+                return p.parent
         return None
 
     def save_meta(self) -> None:
@@ -158,9 +163,18 @@ class Episode:
     def exhausted(self, max_turns: int) -> bool:
         return self.total_turns >= max_turns
 
-    def next_turn(self) -> None:
+    def next_turn(self, has_proposer: bool = False) -> None:
         """创建下一个 Turn，建立目录结构，append 到 turns。"""
         turn_dir = self.base_dir / f"turn_{len(self.turns) + 1}"
+
+        prop_input_dir = None
+        prop_output_dir = None
+        if has_proposer:
+            prop_input_dir = turn_dir / "prop_input"
+            prop_output_dir = turn_dir / "prop_output"
+            prop_input_dir.mkdir(parents=True, exist_ok=True)
+            prop_output_dir.mkdir(parents=True, exist_ok=True)
+
         exec_input_dir = turn_dir / "exec_input"
         exec_output_dir = turn_dir / "exec_output"
         eval_input_dir = turn_dir / "eval_input"
@@ -172,6 +186,8 @@ class Episode:
         eval_output_dir.mkdir(parents=True, exist_ok=True)
 
         self.turns.append(Turn(
+            prop_input_path=prop_input_dir,
+            prop_output_path=prop_output_dir,
             exec_input_path=exec_input_dir,
             exec_output_path=exec_output_dir,
             eval_input_path=eval_input_dir,
@@ -214,6 +230,8 @@ class Episode:
                     logger.info("cleaned incomplete turn: %s", turn_dir)
                     continue
 
+                prop_input_dir = turn_dir / "prop_input"
+                prop_output_dir = turn_dir / "prop_output"
                 exec_input_dir = turn_dir / "exec_input"
                 exec_output_dir = turn_dir / "exec_output"
                 eval_input_dir = turn_dir / "eval_input"
@@ -222,11 +240,15 @@ class Episode:
                 meta = json.loads(meta_path.read_text(encoding="utf-8"))
 
                 turns.append(Turn(
+                    prop_input_path=prop_input_dir if prop_input_dir.exists() else None,
+                    prop_output_path=prop_output_dir if prop_output_dir.exists() else None,
                     exec_input_path=exec_input_dir if exec_input_dir.exists() else None,
                     exec_output_path=exec_output_dir if exec_output_dir.exists() else None,
                     eval_input_path=eval_input_dir if eval_input_dir.exists() else None,
                     eval_output_path=eval_output_dir if eval_output_dir.exists() else None,
                     passed=meta.get("passed"),
+                    prop_input_manifest=_load_manifest(prop_input_dir, PropInputManifest),
+                    prop_output_manifest=_load_manifest(prop_output_dir, PropOutputManifest),
                     exec_input_manifest=_load_manifest(exec_input_dir, ExecInputManifest),
                     exec_output_manifest=_load_manifest(exec_output_dir, ExecOutputManifest),
                     eval_input_manifest=_load_manifest(eval_input_dir, EvalInputManifest),

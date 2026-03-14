@@ -143,6 +143,20 @@ class DatasetSettings(BaseSettings):
     )
 
 
+class ProposerSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="PROPOSER__",
+        extra="ignore"
+    )
+    proposer_type: str = tracked_field(
+        description="Proposer type"
+    )
+    concurrency: int = untracked_field(
+        default=1,
+        description="Max concurrent proposer executions"
+    )
+
+
 class LoggerSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="LOG__", 
@@ -205,6 +219,7 @@ class Settings(BaseSettings):
     executor: ExecutorSettings
     evaluator: EvaluatorSettings
     experiment: ExperimentSettings
+    proposer: ProposerSettings | None = None
 
 
 _settings: Settings | None = None
@@ -225,6 +240,11 @@ def init_settings(env_file: str = ".env") -> Settings:
 
 def _build_settings(env_file: str) -> Settings:
     env = (ROOT_DIR / env_file).resolve()
+    proposer = None
+    try:
+        proposer = ProposerSettings(_env_file=env)
+    except Exception:
+        pass
     return Settings(
         _env_file=env,
         dataset=DatasetSettings(_env_file=env),
@@ -235,6 +255,7 @@ def _build_settings(env_file: str) -> Settings:
             docker=DockerSettings(_env_file=env),
         ),
         experiment=ExperimentSettings(_env_file=env),
+        proposer=proposer,
     )
 
 
