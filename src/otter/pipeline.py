@@ -8,6 +8,7 @@ from rich.prompt import Confirm
 from otter import dataset
 from otter import executor
 from otter import evaluator
+from otter import proposer
 from otter.config.setting import get_settings, get_tracked_config
 from otter.episode import Episode, EXPERIMENT_META
 from otter.logger import get_logger
@@ -39,6 +40,15 @@ def create_evaluator() -> evaluator.BaseEvaluator:
             return evaluator.DockerEvaluator()
         case _:
             raise ValueError(f"unknown evaluator_type: {settings.evaluator.evaluator_type}")
+
+
+def create_proposer() -> proposer.BaseProposer | None:
+    settings = get_settings()
+    if settings.proposer is None:
+        return None
+    match settings.proposer.proposer_type:
+        case _:
+            raise ValueError(f"unknown proposer_type: {settings.proposer.proposer_type}")
 
 
 def get_pending_episodes(ds: dataset.BaseDataset) -> list[Episode]:
@@ -74,19 +84,22 @@ async def run_turn(
     ep: Episode,
     exec_semaphore: asyncio.Semaphore,
     eval_semaphore: asyncio.Semaphore,
+    prop_client: proposer.BaseProposer | None = None,
+    prop_semaphore: asyncio.Semaphore | None = None,
 ) -> None:
-    """执行单轮：创建 Turn → prepare → generate → prepare → execute → judge。"""
+    """执行单轮：创建 Turn → [propose] → generate → execute → judge。"""
     logger = get_logger()
 
     # Step 1: make new turn
-    ep.next_turn()
+    ep.next_turn(has_proposer=prop_client is not None)
     logger.info("[%s] turn %d queued", ep.eid, ep.total_turns)
 
-    # Step 2: Prpopser run
-    # ds.prepare_prop_input(ep)
-    # async with prop_semaphore:
-    #     logger.info("[%s] turn %d proposing...", ep.eid, ep.total_turns)
-    #     await prop_client.run(ep)
+    # Step 2: Proposer run (optional)
+    if prop_client is not None:
+        ds.prepare_prop_input(ep)
+        async with prop_semaphore:
+            logger.info("[%s] turn %d proposing...", ep.eid, ep.total_turns)
+            await prop_client.run(ep)
 
     # Step 3: Executor run
     ds.prepare_exec_input(ep)
@@ -110,11 +123,17 @@ async def run(
     ds: dataset.BaseDataset,
     exec_client: executor.BaseExecutor,
     eval_client: evaluator.BaseEvaluator,
+    prop_client: proposer.BaseProposer | None = None,
 ) -> list[Episode]:
     settings = get_settings()
     logger = get_logger()
     exec_semaphore = asyncio.Semaphore(settings.executor.concurrency)
     eval_semaphore = asyncio.Semaphore(settings.evaluator.concurrency)
+    prop_semaphore = (
+        asyncio.Semaphore(settings.proposer.concurrency)
+        if settings.proposer is not None
+        else None
+    )
     max_turns = settings.experiment.max_turns
     episodes = get_pending_episodes(ds)
     logger.info("starting run: %d episodes to process", len(episodes))
@@ -123,7 +142,11 @@ async def run(
         try:
             async with ds.episode_context(ep):
                 while not ep.resolved and not ep.exhausted(max_turns):
-                    await run_turn(ds, exec_client, eval_client, ep, exec_semaphore, eval_semaphore)
+                    await run_turn(
+                        ds, exec_client, eval_client, ep,
+                        exec_semaphore, eval_semaphore,
+                        prop_client, prop_semaphore,
+                    )
         except Exception as e:
             logger.error("[%s] episode failed: %s", ep.eid, e)
 
@@ -192,7 +215,8 @@ async def main():
     ds = create_dataset()
     exec_client = create_executor()
     eval_client = create_evaluator()
+    prop_client = create_proposer()
 
     async with ds.run_context():
-        episodes = await run(ds, exec_client, eval_client)
+        episodes = await run(ds, exec_client, eval_client, prop_client)
         logger.info("done: %d episodes processed", len(episodes))
