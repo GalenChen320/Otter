@@ -19,12 +19,13 @@ Mainstream code benchmarks use snapshot-style evaluation — one input, one outp
 Otter integrates environment feedback into the evaluation loop, letting LLMs work like real developers: write code → run → read errors → fix → run again, until the tests pass or the maximum number of turns is reached.
 
 ```
-      ┌──────────── Feedback ────────────┐
-      │                                  │
-      ↓                                  │
-   Prompt ──→ LLM ──→ Code ──→ Environment ──→ Pass? ──→ Done
-                                                 │
-                                                 └─→ Failed, loop continues
+   ┌────────────────────────────┐
+   ↓                            │
+Proposer ───→ Executor ───→ Evaluator
+                                │
+                          Pass? │
+                                ↓
+                               End
 ```
 
 ## Quick Start
@@ -91,8 +92,8 @@ experiments/{experiment_id}/
     ├── turn_1/
     │   ├── llm_input/    # Prompt sent to the LLM
     │   ├── llm_output/   # Raw LLM response
-    │   ├── env_input/    # Code script to execute
-    │   ├── env_output/   # Execution results (stdout/stderr/returncode)
+    │   ├── eval_input/    # Code script to execute
+    │   ├── eval_output/   # Execution results (stdout/stderr/returncode)
     │   └── meta.json     # Turn verdict {"passed": true/false}
     ├── turn_2/           # Turn 2 (if turn 1 failed and max_turns > 1)
     │   └── ...

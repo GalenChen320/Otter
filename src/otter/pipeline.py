@@ -7,7 +7,7 @@ from rich.prompt import Confirm
 
 from otter import dataset
 from otter import llm
-from otter import environment
+from otter import evaluator
 from otter.config.setting import get_settings, get_tracked_config
 from otter.episode import Episode, EXPERIMENT_META
 from otter.logger import get_logger
@@ -32,13 +32,13 @@ def create_llm() -> llm.BaseLLM:
             raise ValueError(f"unknown llm_type: {settings.llm.llm_type}")
 
 
-def create_environment() -> environment.BaseEnvironment:
+def create_evaluator() -> evaluator.BaseEvaluator:
     settings = get_settings()
-    match settings.environment.environment_type:
+    match settings.evaluator.evaluator_type:
         case "docker":
-            return environment.DockerEnvironment()
+            return evaluator.DockerEvaluator()
         case _:
-            raise ValueError(f"unknown environment_type: {settings.environment.environment_type}")
+            raise ValueError(f"unknown evaluator_type: {settings.evaluator.evaluator_type}")
 
 
 def get_pending_episodes(ds: dataset.BaseDataset) -> list[Episode]:
@@ -70,10 +70,10 @@ def get_pending_episodes(ds: dataset.BaseDataset) -> list[Episode]:
 async def run_turn(
     ds: dataset.BaseDataset,
     llm_client: llm.BaseLLM,
-    env_client: environment.BaseEnvironment,
+    eval_client: evaluator.BaseEvaluator,
     ep: Episode,
     llm_semaphore: asyncio.Semaphore,
-    env_semaphore: asyncio.Semaphore,
+    eval_semaphore: asyncio.Semaphore,
 ) -> None:
     """执行单轮：创建 Turn → prepare → generate → prepare → execute → judge。"""
     logger = get_logger()
@@ -86,9 +86,9 @@ async def run_turn(
         logger.info("[%s] turn %d generating", ep.eid, ep.total_turns)
         await llm_client.generate(ep)
 
-    ds.prepare_env_input(ep)
-    async with env_semaphore:
-        await env_client.execute(ep)
+    ds.prepare_eval_input(ep)
+    async with eval_semaphore:
+        await eval_client.execute(ep)
     await ds.make_judgement(ep)
 
     logger.info("[%s] turn %d completed (passed=%s)",
@@ -98,12 +98,12 @@ async def run_turn(
 async def run(
     ds: dataset.BaseDataset,
     llm_client: llm.BaseLLM,
-    env_client: environment.BaseEnvironment,
+    eval_client: evaluator.BaseEvaluator,
 ) -> list[Episode]:
     settings = get_settings()
     logger = get_logger()
     llm_semaphore = asyncio.Semaphore(settings.llm.concurrency)
-    env_semaphore = asyncio.Semaphore(settings.environment.concurrency)
+    eval_semaphore = asyncio.Semaphore(settings.evaluator.concurrency)
     max_turns = settings.experiment.max_turns
     episodes = get_pending_episodes(ds)
     logger.info("starting run: %d episodes to process", len(episodes))
@@ -112,7 +112,7 @@ async def run(
         try:
             async with ds.episode_context(ep):
                 while not ep.resolved and not ep.exhausted(max_turns):
-                    await run_turn(ds, llm_client, env_client, ep, llm_semaphore, env_semaphore)
+                    await run_turn(ds, llm_client, eval_client, ep, llm_semaphore, eval_semaphore)
         except Exception as e:
             logger.error("[%s] episode failed: %s", ep.eid, e)
 
@@ -180,8 +180,8 @@ async def main():
 
     ds = create_dataset()
     llm_client = create_llm()
-    env_client = create_environment()
+    eval_client = create_evaluator()
 
     async with ds.run_context():
-        episodes = await run(ds, llm_client, env_client)
+        episodes = await run(ds, llm_client, eval_client)
         logger.info("done: %d episodes processed", len(episodes))

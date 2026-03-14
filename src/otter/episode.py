@@ -71,8 +71,8 @@ class LLMOutputManifest(BaseManifest):
 
 
 @dataclass
-class EnvInputManifest(BaseManifest):
-    """执行侧的句柄。Dataset 写入，Environment 读取。"""
+class EvalInputManifest(BaseManifest):
+    """执行侧的句柄。Dataset 写入，Evaluator 读取。"""
     image_tag: str | None = None
     script_file: Path | None = None
     commands: list[str] | None = None
@@ -80,8 +80,8 @@ class EnvInputManifest(BaseManifest):
 
 
 @dataclass
-class EnvOutputManifest(BaseManifest):
-    """环境输出侧的句柄。Environment 写入，Dataset 读取。"""
+class EvalOutputManifest(BaseManifest):
+    """环境输出侧的句柄。Evaluator 写入，Dataset 读取。"""
     stdout_file: Path | None = None
     stderr_file: Path | None = None
     returncode: int | None = None
@@ -96,13 +96,13 @@ EXPERIMENT_META = "experiment.json"
 class Turn:
     llm_input_path: Path | None = None
     llm_output_path: Path | None = None
-    env_input_path: Path | None = None
-    env_output_path: Path | None = None
+    eval_input_path: Path | None = None
+    eval_output_path: Path | None = None
     passed: bool | None = None
     llm_input_manifest: LLMInputManifest | None = None
     llm_output_manifest: LLMOutputManifest | None = None
-    env_input_manifest: EnvInputManifest | None = None
-    env_output_manifest: EnvOutputManifest | None = None
+    eval_input_manifest: EvalInputManifest | None = None
+    eval_output_manifest: EvalOutputManifest | None = None
 
     @property
     def turn_dir(self) -> Path | None:
@@ -152,19 +152,19 @@ class Episode:
         turn_dir = self.base_dir / f"turn_{len(self.turns) + 1}"
         llm_input_dir = turn_dir / "llm_input"
         llm_output_dir = turn_dir / "llm_output"
-        env_input_dir = turn_dir / "env_input"
-        env_output_dir = turn_dir / "env_output"
+        eval_input_dir = turn_dir / "eval_input"
+        eval_output_dir = turn_dir / "eval_output"
 
         llm_input_dir.mkdir(parents=True, exist_ok=True)
         llm_output_dir.mkdir(parents=True, exist_ok=True)
-        env_input_dir.mkdir(parents=True, exist_ok=True)
-        env_output_dir.mkdir(parents=True, exist_ok=True)
+        eval_input_dir.mkdir(parents=True, exist_ok=True)
+        eval_output_dir.mkdir(parents=True, exist_ok=True)
 
         self.turns.append(Turn(
             llm_input_path=llm_input_dir,
             llm_output_path=llm_output_dir,
-            env_input_path=env_input_dir,
-            env_output_path=env_output_dir,
+            eval_input_path=eval_input_dir,
+            eval_output_path=eval_output_dir,
         ))
 
     @classmethod
@@ -205,21 +205,21 @@ class Episode:
 
                 llm_input_dir = turn_dir / "llm_input"
                 llm_output_dir = turn_dir / "llm_output"
-                env_input_dir = turn_dir / "env_input"
-                env_output_dir = turn_dir / "env_output"
+                eval_input_dir = turn_dir / "eval_input"
+                eval_output_dir = turn_dir / "eval_output"
 
                 meta = json.loads(meta_path.read_text(encoding="utf-8"))
 
                 turns.append(Turn(
                     llm_input_path=llm_input_dir if llm_input_dir.exists() else None,
                     llm_output_path=llm_output_dir if llm_output_dir.exists() else None,
-                    env_input_path=env_input_dir if env_input_dir.exists() else None,
-                    env_output_path=env_output_dir if env_output_dir.exists() else None,
+                    eval_input_path=eval_input_dir if eval_input_dir.exists() else None,
+                    eval_output_path=eval_output_dir if eval_output_dir.exists() else None,
                     passed=meta.get("passed"),
                     llm_input_manifest=_load_manifest(llm_input_dir, LLMInputManifest),
                     llm_output_manifest=_load_manifest(llm_output_dir, LLMOutputManifest),
-                    env_input_manifest=_load_manifest(env_input_dir, EnvInputManifest),
-                    env_output_manifest=_load_manifest(env_output_dir, EnvOutputManifest),
+                    eval_input_manifest=_load_manifest(eval_input_dir, EvalInputManifest),
+                    eval_output_manifest=_load_manifest(eval_output_dir, EvalOutputManifest),
                 ))
 
             episodes[eid] = Episode(

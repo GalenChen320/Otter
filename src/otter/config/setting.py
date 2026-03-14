@@ -107,20 +107,20 @@ class DockerSettings(BaseSettings):
         return _coerce_empty_str(v)
 
 
-class EnvironmentSettings(BaseSettings):
+class EvaluatorSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="ENVIRONMENT__", 
+        env_prefix="EVALUATOR__", 
         extra="ignore"
     )
-    environment_type: Literal[
+    evaluator_type: Literal[
         "docker"
     ] = tracked_field(
         default="docker",
-        description="Execution environment type"
+        description="Execution evaluator type"
     )
     concurrency: int = untracked_field(
         default=1,
-        description="Max concurrent environment executions"
+        description="Max concurrent evaluator executions"
     )
     docker: DockerSettings = DockerSettings()
 
@@ -203,7 +203,7 @@ class Settings(BaseSettings):
     dataset: DatasetSettings
     llm: LLMSettings
     log: LoggerSettings
-    environment: EnvironmentSettings
+    evaluator: EvaluatorSettings
     experiment: ExperimentSettings
 
 
@@ -230,7 +230,7 @@ def _build_settings(env_file: str) -> Settings:
         dataset=DatasetSettings(_env_file=env),
         llm=LLMSettings(_env_file=env),
         log=LoggerSettings(_env_file=env),
-        environment=EnvironmentSettings(
+        evaluator=EvaluatorSettings(
             _env_file=env,
             docker=DockerSettings(_env_file=env),
         ),
