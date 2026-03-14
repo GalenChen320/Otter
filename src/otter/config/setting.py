@@ -1,20 +1,28 @@
 from pathlib import Path
-from pydantic import Field
 from typing import Literal, Any
+
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 ROOT_DIR = Path(__file__).parent.parent.parent.parent
+_REQUIRED = ...
 
-
-def tracked_field(default=..., **kwargs) -> Any:
+def tracked_field(default=_REQUIRED, **kwargs) -> Any:
     extra = kwargs.pop("json_schema_extra", {})
     return Field(default, json_schema_extra={"core": True, **extra}, **kwargs)
 
 
-def untracked_field(default=..., **kwargs) -> Any:
+def untracked_field(default=_REQUIRED, **kwargs) -> Any:
     extra = kwargs.pop("json_schema_extra", {})
     return Field(default, json_schema_extra={"core": False, **extra}, **kwargs)
+
+
+def _coerce_empty_str(v: Any) -> Any:
+    """将空字符串转为 None，用于 Optional 字段的 field_validator。"""
+    if isinstance(v, str) and v.strip() == "":
+        return None
+    return v
 
 
 class LLMSettings(BaseSettings):
@@ -89,6 +97,15 @@ class DockerSettings(BaseSettings):
         description="Command execution timeout in seconds"
     )
 
+    @field_validator(
+        "cpus", "memory", "memory_swap", "memory_reservation",
+        "network_mode", "device_read_bps", "device_write_bps",
+        mode="before",
+    )
+    @classmethod
+    def _empty_str_to_none(cls, v: Any) -> Any:
+        return _coerce_empty_str(v)
+
 
 class EnvironmentSettings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -144,6 +161,11 @@ class LoggerSettings(BaseSettings):
         default=None,
         description="Path to log file, stdout only if not set"
     )
+
+    @field_validator("log_file", mode="before")
+    @classmethod
+    def _empty_str_to_none(cls, v: Any) -> Any:
+        return _coerce_empty_str(v)
 
 
 class ExperimentSettings(BaseSettings):
@@ -203,6 +225,7 @@ def init_settings(env_file: str = ".env") -> Settings:
 def _build_settings(env_file: str) -> Settings:
     env = (ROOT_DIR / env_file).resolve()
     return Settings(
+        _env_file=env,
         dataset=DatasetSettings(_env_file=env),
         llm=LLMSettings(_env_file=env),
         log=LoggerSettings(_env_file=env),
@@ -222,8 +245,10 @@ def _collect_tracked(obj: BaseSettings, prefix: str = "") -> dict[str, Any]:
         value = getattr(obj, name)
         if isinstance(value, BaseSettings):
             result.update(_collect_tracked(value, f"{key}."))
-        elif field_info.json_schema_extra and field_info.json_schema_extra.get("core"):
-            result[key] = value
+        else:
+            extra = field_info.json_schema_extra
+            if isinstance(extra, dict) and extra.get("core"):
+                result[key] = value
     return result
 
 
