@@ -24,8 +24,10 @@ def create_dataset() -> dataset.BaseDataset:
             raise ValueError(f"unknown dataset: {settings.dataset.dataset_name}")
 
 
-def create_executor() -> executor.BaseExecutor:
+def create_executor() -> executor.BaseExecutor | None:
     settings = get_settings()
+    if settings.executor is None:
+        return None
     match settings.executor.executor_type:
         case "chat_llm":
             return executor.ChatLLMExecutor()
@@ -33,8 +35,10 @@ def create_executor() -> executor.BaseExecutor:
             raise ValueError(f"unknown executor_type: {settings.executor.executor_type}")
 
 
-def create_evaluator() -> evaluator.BaseEvaluator:
+def create_evaluator() -> evaluator.BaseEvaluator | None:
     settings = get_settings()
+    if settings.evaluator is None:
+        return None
     match settings.evaluator.evaluator_type:
         case "docker":
             return evaluator.DockerEvaluator()
@@ -79,19 +83,19 @@ def get_pending_episodes(ds: dataset.BaseDataset) -> list[Episode]:
 
 async def run_turn(
     ds: dataset.BaseDataset,
-    exec_client: executor.BaseExecutor,
-    eval_client: evaluator.BaseEvaluator,
     ep: Episode,
-    exec_semaphore: asyncio.Semaphore,
-    eval_semaphore: asyncio.Semaphore,
     prop_client: proposer.BaseProposer | None = None,
+    exec_client: executor.BaseExecutor | None = None,
+    eval_client: evaluator.BaseEvaluator | None = None,
     prop_semaphore: asyncio.Semaphore | None = None,
+    exec_semaphore: asyncio.Semaphore | None = None,
+    eval_semaphore: asyncio.Semaphore | None = None,
 ) -> None:
-    """执行单轮：创建 Turn → [propose] → generate → execute → judge。"""
+    """执行单轮：创建 Turn → [propose] → [generate] → [execute] → judge。"""
     logger = get_logger()
 
     # Step 1: make new turn
-    ep.next_turn(has_proposer=prop_client is not None)
+    ep.next_turn()
     logger.info("[%s] turn %d queued", ep.eid, ep.total_turns)
 
     # Step 2: Proposer run (optional)
@@ -101,17 +105,19 @@ async def run_turn(
             logger.info("[%s] turn %d proposing...", ep.eid, ep.total_turns)
             await prop_client.run(ep)
 
-    # Step 3: Executor run
-    ds.prepare_exec_input(ep)
-    async with exec_semaphore:
-        logger.info("[%s] turn %d executing...", ep.eid, ep.total_turns)
-        await exec_client.run(ep)
+    # Step 3: Executor run (optional)
+    if exec_client is not None:
+        ds.prepare_exec_input(ep)
+        async with exec_semaphore:
+            logger.info("[%s] turn %d executing...", ep.eid, ep.total_turns)
+            await exec_client.run(ep)
 
-    # Step 4: Evaluator run
-    ds.prepare_eval_input(ep)
-    async with eval_semaphore:
-        logger.info("[%s] turn %d evaluating...", ep.eid, ep.total_turns)
-        await eval_client.run(ep)
+    # Step 4: Evaluator run (optional)
+    if eval_client is not None:
+        ds.prepare_eval_input(ep)
+        async with eval_semaphore:
+            logger.info("[%s] turn %d evaluating...", ep.eid, ep.total_turns)
+            await eval_client.run(ep)
 
     # Step 5: make judgement
     await ds.make_judgement(ep)
@@ -121,19 +127,26 @@ async def run_turn(
 
 async def run(
     ds: dataset.BaseDataset,
-    exec_client: executor.BaseExecutor,
-    eval_client: evaluator.BaseEvaluator,
     prop_client: proposer.BaseProposer | None = None,
+    exec_client: executor.BaseExecutor | None = None,
+    eval_client: evaluator.BaseEvaluator | None = None,
 ) -> list[Episode]:
     settings = get_settings()
     logger = get_logger()
-    exec_semaphore = asyncio.Semaphore(settings.executor.concurrency)
-    eval_semaphore = asyncio.Semaphore(settings.evaluator.concurrency)
+
     prop_semaphore = (
         asyncio.Semaphore(settings.proposer.concurrency)
-        if settings.proposer is not None
-        else None
+        if settings.proposer is not None else None
     )
+    exec_semaphore = (
+        asyncio.Semaphore(settings.executor.concurrency)
+        if settings.executor is not None else None
+    )
+    eval_semaphore = (
+        asyncio.Semaphore(settings.evaluator.concurrency)
+        if settings.evaluator is not None else None
+    )
+
     max_turns = settings.experiment.max_turns
     episodes = get_pending_episodes(ds)
     logger.info("starting run: %d episodes to process", len(episodes))
@@ -143,9 +156,9 @@ async def run(
             async with ds.episode_context(ep):
                 while not ep.resolved and not ep.exhausted(max_turns):
                     await run_turn(
-                        ds, exec_client, eval_client, ep,
-                        exec_semaphore, eval_semaphore,
-                        prop_client, prop_semaphore,
+                        ds, ep,
+                        prop_client, exec_client, eval_client,
+                        prop_semaphore, exec_semaphore, eval_semaphore,
                     )
         except Exception as e:
             logger.error("[%s] episode failed: %s", ep.eid, e)
@@ -213,10 +226,10 @@ async def main():
     verify_or_create_experiment_meta(settings.experiment.output_dir)
 
     ds = create_dataset()
+    prop_client = create_proposer()
     exec_client = create_executor()
     eval_client = create_evaluator()
-    prop_client = create_proposer()
 
     async with ds.run_context():
-        episodes = await run(ds, exec_client, eval_client, prop_client)
+        episodes = await run(ds, prop_client, exec_client, eval_client)
         logger.info("done: %d episodes processed", len(episodes))
