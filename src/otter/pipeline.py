@@ -88,7 +88,7 @@ async def run_turn(
 
     ds.prepare_eval_input(ep)
     async with eval_semaphore:
-        await eval_client.execute(ep)
+        await eval_client.run(ep)
     await ds.make_judgement(ep)
 
     logger.info("[%s] turn %d completed (passed=%s)",
