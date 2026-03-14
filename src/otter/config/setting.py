@@ -199,6 +199,7 @@ class ExperimentSettings(BaseSettings):
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(extra="ignore")
     dataset: DatasetSettings
     llm: LLMSettings
     log: LoggerSettings

@@ -32,7 +32,7 @@ class EvalPlusDataset(BaseDataset):
         self._problems: dict[str, HumanEvalProblem] = {}
         for row in raw["test"]:
             p = HumanEvalProblem(
-                task_id=row["task_id"],
+                task_id=row["task_id"].replace("/", "_"),
                 prompt=row["prompt"],
                 entry_point=row["entry_point"],
                 test=row["test"],
@@ -75,3 +75,38 @@ class EvalPlusDataset(BaseDataset):
         prompt_file.write_text(prompt, encoding="utf-8")
 
         return LLMInputManifest(prompt_file=prompt_file)
+
+    def _prepare_env_input(self, episode: Episode) -> EnvInputManifest:
+        turn = episode.turns[-1]
+        llm_output_manifest = turn.llm_output_manifest
+
+        if not llm_output_manifest or not llm_output_manifest.llm_output_file:
+            raise ValueError("EvalPlusDataset requires 'llm_output_file' in LLMOutputManifest")
+
+        response = llm_output_manifest.llm_output_file.read_text(encoding="utf-8")
+
+        code = extract_code(response)
+        problem = self._problems[episode.task_id]
+        full_code = (
+            f"{code}\n\n"
+            f"{problem.test}\n\n"
+            f"check({problem.entry_point})\n"
+        )
+
+        script_file = turn.env_input_path / "solution.py"
+        script_file.write_text(full_code, encoding="utf-8")
+
+        return EnvInputManifest(
+            image_tag=self.IMAGE_TAG,
+            script_file=script_file,
+            commands=["python /tmp/solution.py"],
+        )
+
+    async def _judge(self, episode: Episode) -> None:
+        turn = episode.turns[-1]
+        env_output = turn.env_output_manifest
+
+        if not env_output:
+            raise ValueError("EvalPlusDataset requires EnvOutputManifest")
+
+        turn.passed = env_output.returncode == 0 and not env_output.timed_out
