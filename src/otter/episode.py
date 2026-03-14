@@ -81,7 +81,7 @@ class EvalInputManifest(BaseManifest):
 
 @dataclass
 class EvalOutputManifest(BaseManifest):
-    """环境输出侧的句柄。Evaluator 写入，Dataset 读取。"""
+    """评估器输出侧的句柄。Evaluator 写入，Dataset 读取。"""
     stdout_file: Path | None = None
     stderr_file: Path | None = None
     returncode: int | None = None
