@@ -6,7 +6,9 @@ from otter.episode import EnvInputManifest, Episode, LLMInputManifest
 
 
 class BaseDataset(ABC):
-    base_dir: Path | None = None
+
+    def __init__(self, base_dir: Path) -> None:
+        self.base_dir = base_dir
 
     @property
     @abstractmethod
@@ -15,18 +17,18 @@ class BaseDataset(ABC):
 
     # ── 生命周期 ──
 
-    async def setup(self, output_dir: Path) -> None:
+    async def setup(self) -> None:
         """Dataset 级别初始化，整个评测开始前调用一次。"""
-        self.base_dir = output_dir
+        pass
 
     async def teardown(self) -> None:
         """Dataset 级别资源回收，整个评测结束后调用一次。"""
         pass
 
     @asynccontextmanager
-    async def run_context(self, output_dir: Path):
+    async def run_context(self):
         """Dataset 级别上下文管理器，包裹 setup/teardown。"""
-        await self.setup(output_dir)
+        await self.setup()
         try:
             yield
         finally:
