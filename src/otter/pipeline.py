@@ -11,10 +11,10 @@ from otter.logger import get_logger
 
 def create_dataset() -> dataset.BaseDataset:
     settings = get_settings()
+    output_dir = settings.experiment.output_dir
     match settings.dataset.dataset_name:
-        case "humaneval": return dataset.HumanEvalDataset()
-        case "apps": return dataset.APPSDataset()
-        case "mbppplus": return dataset.MBPPPlusDataset()
+        case "apps": return dataset.APPSDataset(output_dir)
+        case "mbppplus": return dataset.MBPPPlusDataset(output_dir)
         case _:
             raise ValueError(f"unknown dataset: {settings.dataset.dataset_name}")
 
@@ -160,6 +160,6 @@ async def main():
     llm_client = create_llm()
     env_client = create_environment()
 
-    async with ds.run_context(settings.experiment.output_dir):
+    async with ds.run_context():
         episodes = await run(ds, llm_client, env_client)
         logger.info("done: %d episodes processed", len(episodes))

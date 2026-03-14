@@ -23,9 +23,7 @@ class MBPPPlusDataset(BaseDataset):
 
     IMAGE_TAG = "otter-mbppplus:latest"
 
-    async def setup(self, output_dir) -> None:
-        await super().setup(output_dir)
-
+    async def setup(self) -> None:
         settings = get_settings()
         logger = get_logger()
         raw = load_dataset(
