@@ -118,8 +118,7 @@ class DatasetSettings(BaseSettings):
         description="Local cache directory for downloaded datasets"
     )
     dataset_name: Literal[
-        "humaneval",
-        "apps",
+        "evalplus",
         "mbppplus"
     ] = tracked_field(
         default="mbppplus",

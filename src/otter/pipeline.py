@@ -17,7 +17,7 @@ def create_dataset() -> dataset.BaseDataset:
     settings = get_settings()
     output_dir = settings.experiment.output_dir
     match settings.dataset.dataset_name:
-        case "apps": return dataset.APPSDataset(output_dir)
+        case "evalplus": return dataset.EvalPlusDataset(output_dir)
         case "mbppplus": return dataset.MBPPPlusDataset(output_dir)
         case _:
             raise ValueError(f"unknown dataset: {settings.dataset.dataset_name}")
