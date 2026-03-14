@@ -59,15 +59,15 @@ class BaseManifest:
         )
 
 @dataclass
-class LLMInputManifest(BaseManifest):
-    """LLM 输入侧的句柄。Dataset 写入，LLM 读取。"""
+class ExecInputManifest(BaseManifest):
+    """Executor 输入侧的句柄。Dataset 写入，Executor 读取。"""
     prompt_file: Path | None = None
 
 
 @dataclass
-class LLMOutputManifest(BaseManifest):
-    """LLM 输出侧的句柄。LLM 写入，Dataset 读取。"""
-    llm_output_file: Path | None = None
+class ExecOutputManifest(BaseManifest):
+    """Executor 输出侧的句柄。Executor 写入，Dataset 读取。"""
+    exec_output_file: Path | None = None
 
 
 @dataclass
@@ -94,20 +94,20 @@ EXPERIMENT_META = "experiment.json"
 
 @dataclass
 class Turn:
-    llm_input_path: Path | None = None
-    llm_output_path: Path | None = None
+    exec_input_path: Path | None = None
+    exec_output_path: Path | None = None
     eval_input_path: Path | None = None
     eval_output_path: Path | None = None
     passed: bool | None = None
-    llm_input_manifest: LLMInputManifest | None = None
-    llm_output_manifest: LLMOutputManifest | None = None
+    exec_input_manifest: ExecInputManifest | None = None
+    exec_output_manifest: ExecOutputManifest | None = None
     eval_input_manifest: EvalInputManifest | None = None
     eval_output_manifest: EvalOutputManifest | None = None
 
     @property
     def turn_dir(self) -> Path | None:
-        if self.llm_input_path:
-            return self.llm_input_path.parent
+        if self.exec_input_path:
+            return self.exec_input_path.parent
         return None
 
     def save_meta(self) -> None:
@@ -150,19 +150,19 @@ class Episode:
     def next_turn(self) -> None:
         """创建下一个 Turn，建立目录结构，append 到 turns。"""
         turn_dir = self.base_dir / f"turn_{len(self.turns) + 1}"
-        llm_input_dir = turn_dir / "llm_input"
-        llm_output_dir = turn_dir / "llm_output"
+        exec_input_dir = turn_dir / "exec_input"
+        exec_output_dir = turn_dir / "exec_output"
         eval_input_dir = turn_dir / "eval_input"
         eval_output_dir = turn_dir / "eval_output"
 
-        llm_input_dir.mkdir(parents=True, exist_ok=True)
-        llm_output_dir.mkdir(parents=True, exist_ok=True)
+        exec_input_dir.mkdir(parents=True, exist_ok=True)
+        exec_output_dir.mkdir(parents=True, exist_ok=True)
         eval_input_dir.mkdir(parents=True, exist_ok=True)
         eval_output_dir.mkdir(parents=True, exist_ok=True)
 
         self.turns.append(Turn(
-            llm_input_path=llm_input_dir,
-            llm_output_path=llm_output_dir,
+            exec_input_path=exec_input_dir,
+            exec_output_path=exec_output_dir,
             eval_input_path=eval_input_dir,
             eval_output_path=eval_output_dir,
         ))
@@ -203,21 +203,21 @@ class Episode:
                     logger.info("cleaned incomplete turn: %s", turn_dir)
                     continue
 
-                llm_input_dir = turn_dir / "llm_input"
-                llm_output_dir = turn_dir / "llm_output"
+                exec_input_dir = turn_dir / "exec_input"
+                exec_output_dir = turn_dir / "exec_output"
                 eval_input_dir = turn_dir / "eval_input"
                 eval_output_dir = turn_dir / "eval_output"
 
                 meta = json.loads(meta_path.read_text(encoding="utf-8"))
 
                 turns.append(Turn(
-                    llm_input_path=llm_input_dir if llm_input_dir.exists() else None,
-                    llm_output_path=llm_output_dir if llm_output_dir.exists() else None,
+                    exec_input_path=exec_input_dir if exec_input_dir.exists() else None,
+                    exec_output_path=exec_output_dir if exec_output_dir.exists() else None,
                     eval_input_path=eval_input_dir if eval_input_dir.exists() else None,
                     eval_output_path=eval_output_dir if eval_output_dir.exists() else None,
                     passed=meta.get("passed"),
-                    llm_input_manifest=_load_manifest(llm_input_dir, LLMInputManifest),
-                    llm_output_manifest=_load_manifest(llm_output_dir, LLMOutputManifest),
+                    exec_input_manifest=_load_manifest(exec_input_dir, ExecInputManifest),
+                    exec_output_manifest=_load_manifest(exec_output_dir, ExecOutputManifest),
                     eval_input_manifest=_load_manifest(eval_input_dir, EvalInputManifest),
                     eval_output_manifest=_load_manifest(eval_output_dir, EvalOutputManifest),
                 ))
