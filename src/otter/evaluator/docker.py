@@ -64,7 +64,7 @@ class DockerEvaluator(BaseEvaluator):
         """删除镜像。"""
         await remove_image(image_tag, missing_ok=missing_ok)
 
-    async def _execute(self, episode: Episode) -> EvalOutputManifest:
+    async def _run(self, episode: Episode) -> EvalOutputManifest:
         """从 eval_input_manifest 读取执行规格，创建容器执行，返回 EvalOutputManifest。"""
         turn = episode.turns[-1]
         manifest = turn.eval_input_manifest
