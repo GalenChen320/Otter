@@ -58,6 +58,17 @@ class BaseManifest:
             encoding="utf-8",
         )
 
+
+@dataclass
+class PropInputManifest(BaseManifest):
+    pass
+
+
+@dataclass
+class PropOutputManifest(BaseManifest):
+    pass
+
+
 @dataclass
 class ExecInputManifest(BaseManifest):
     """Executor 输入侧的句柄。Dataset 写入，Executor 读取。"""
