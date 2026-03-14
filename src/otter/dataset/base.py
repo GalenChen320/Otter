@@ -8,10 +8,6 @@ from otter.episode import EnvInputManifest, Episode, LLMInputManifest
 class BaseDataset(ABC):
     base_dir: Path | None = None
 
-    @abstractmethod
-    def load(self) -> None:
-        pass
-
     @property
     @abstractmethod
     def task_ids(self) -> list[str]:

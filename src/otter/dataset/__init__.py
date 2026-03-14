@@ -1,11 +1,11 @@
 from .base import BaseDataset
 from .apps import APPSDataset
-from .humaneval import HumanEvalDataset
+from .evalplus import EvalPlusDataset
 from .mbppplus import MBPPPlusDataset
 
 __all__ = [
     "BaseDataset", 
     "APPSDataset",
-    "HumanEvalDataset",
+    "EvalPlusDataset",
     "MBPPPlusDataset"
 ]
