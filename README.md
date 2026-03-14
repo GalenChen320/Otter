@@ -16,7 +16,7 @@
 
 Mainstream code benchmarks use snapshot-style evaluation — one input, one output. But real-world programming involves iterating based on compiler errors, test failures, and other feedback. **This feedback-driven iteration is the core of programming ability.**
 
-Otter integrates environment feedback into the evaluation loop, letting LLMs work like real developers: write code → run → read errors → fix → run again, until the tests pass or the maximum number of turns is reached.
+Otter integrates evaluation feedback into the evaluation loop, letting LLMs work like real developers: write code → run → read errors → fix → run again, until the tests pass or the maximum number of turns is reached.
 
 ```
    ┌────────────────────────────┐
