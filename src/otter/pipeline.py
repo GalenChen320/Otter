@@ -157,8 +157,6 @@ async def main():
     verify_or_create_experiment_meta(settings.experiment.output_dir)
 
     ds = create_dataset()
-    ds.load()
-
     llm_client = create_llm()
     env_client = create_environment()
 
