@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from otter.episode import EvalInputManifest, Episode, LLMInputManifest
+from otter.episode import EvalInputManifest, Episode, ExecInputManifest
 
 
 class BaseDataset(ABC):
@@ -54,20 +54,20 @@ class BaseDataset(ABC):
     # ── Pipeline 编排接口 ──
 
     @abstractmethod
-    def _prepare_llm_input(self, episode: Episode) -> LLMInputManifest:
-        """子类实现：写入 LLM 输入文件，返回 LLMInputManifest。"""
+    def _prepare_exec_input(self, episode: Episode) -> ExecInputManifest:
+        """子类实现：写入输入文件，返回 ExecInputManifest。"""
         ...
 
-    def prepare_llm_input(self, episode: Episode) -> None:
-        """模板方法：调用子类 _prepare_llm_input，保存 manifest，设置 turn。"""
-        manifest = self._prepare_llm_input(episode)
+    def prepare_exec_input(self, episode: Episode) -> None:
+        """模板方法：调用子类 _prepare_exec_input，保存 manifest，设置 turn。"""
+        manifest = self._prepare_exec_input(episode)
         turn = episode.turns[-1]
-        manifest.save(turn.llm_input_path)
-        turn.llm_input_manifest = manifest
+        manifest.save(turn.exec_input_path)
+        turn.exec_input_manifest = manifest
 
     @abstractmethod
     def _prepare_eval_input(self, episode: Episode) -> EvalInputManifest:
-        """子类实现：从 turn.llm_output_manifest 读取响应，写入执行文件，返回 EvalInputManifest。"""
+        """子类实现：从 turn.exec_output_manifest 读取响应，写入执行文件，返回 EvalInputManifest。"""
         ...
 
     def prepare_eval_input(self, episode: Episode) -> None:

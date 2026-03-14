@@ -6,7 +6,7 @@ import typer
 
 from otter.config.setting import ROOT_DIR
 
-app = typer.Typer(help="Otter - LLM 代码评测框架")
+app = typer.Typer(help="Otter - 智能体代码能力评测框架")
 
 EXPERIMENTS_DIR = ROOT_DIR / "experiments"
 

@@ -25,9 +25,9 @@ def _coerce_empty_str(v: Any) -> Any:
     return v
 
 
-class LLMSettings(BaseSettings):
+class ExecutorSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="LLM__", 
+        env_prefix="EXECUTOR__", 
         extra="ignore"
     )
     api_key: str = untracked_field(
@@ -39,15 +39,15 @@ class LLMSettings(BaseSettings):
     model: str = tracked_field(
         description="Model name to use for generation"
     )
-    llm_type: Literal[
-        "openai_compatible"
+    executor_type: Literal[
+        "chat_llm"
     ] = tracked_field(
-        default="openai_compatible",
-        description="LLM client type"
+        default="chat_llm",
+        description="Executor client type"
     )
     concurrency: int = untracked_field(
         default=1,
-        description="Max concurrent LLM requests"
+        description="Max concurrent executor executions"
     )
     max_retries: int = tracked_field(
         default=3, ge=1,
@@ -201,8 +201,8 @@ class ExperimentSettings(BaseSettings):
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="ignore")
     dataset: DatasetSettings
-    llm: LLMSettings
     log: LoggerSettings
+    executor: ExecutorSettings
     evaluator: EvaluatorSettings
     experiment: ExperimentSettings
 
@@ -228,7 +228,7 @@ def _build_settings(env_file: str) -> Settings:
     return Settings(
         _env_file=env,
         dataset=DatasetSettings(_env_file=env),
-        llm=LLMSettings(_env_file=env),
+        executor=ExecutorSettings(_env_file=env),
         log=LoggerSettings(_env_file=env),
         evaluator=EvaluatorSettings(
             _env_file=env,

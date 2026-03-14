@@ -4,7 +4,7 @@ from datasets import load_dataset
 from otter.dataset.base import BaseDataset
 from otter.dataset.utils import extract_code
 from otter.config.setting import get_settings
-from otter.episode import Episode, EvalInputManifest, LLMInputManifest
+from otter.episode import Episode, EvalInputManifest, ExecInputManifest
 from otter.evaluator.docker import DockerEvaluator
 from otter.logger import get_logger
 
@@ -71,7 +71,7 @@ class MBPPPlusDataset(BaseDataset):
             f"Any import of a non-standard library will cause a runtime error."
         )
 
-    def _prepare_llm_input(self, episode: Episode) -> LLMInputManifest:
+    def _prepare_exec_input(self, episode: Episode) -> ExecInputManifest:
         turn = episode.turns[-1]
 
         # 第一轮：写题目 prompt；后续轮次：写 feedback
@@ -80,20 +80,20 @@ class MBPPPlusDataset(BaseDataset):
         else:
             prompt = "Your code is incorrect. Please try again."
 
-        prompt_file = turn.llm_input_path / "prompt.txt"
+        prompt_file = turn.exec_input_path / "prompt.txt"
         prompt_file.write_text(prompt, encoding="utf-8")
 
-        return LLMInputManifest(prompt_file=prompt_file)
+        return ExecInputManifest(prompt_file=prompt_file)
 
     def _prepare_eval_input(self, episode: Episode) -> EvalInputManifest:
         turn = episode.turns[-1]
-        llm_output_manifest = turn.llm_output_manifest
+        exec_output_manifest = turn.exec_output_manifest
 
-        if not llm_output_manifest or not llm_output_manifest.llm_output_file:
-            raise ValueError("MBPPPlusDataset requires 'llm_output_file' in LLMOutputManifest")
+        if not exec_output_manifest or not exec_output_manifest.exec_output_file:
+            raise ValueError("MBPPPlusDataset requires 'exec_output_file' in ExecOutputManifest")
 
-        # 从 llm_output manifest 读取 response
-        response = llm_output_manifest.llm_output_file.read_text(encoding="utf-8")
+        # 从 exec_output manifest 读取 response
+        response = exec_output_manifest.exec_output_file.read_text(encoding="utf-8")
 
         # 提取代码，拼接测试，写入脚本文件
         code = extract_code(response)

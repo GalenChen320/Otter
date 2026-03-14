@@ -7,7 +7,7 @@
     </td>
     <td valign="top" align="left">
       <h1>Otter</h1>
-      <p>An LLM code evaluation framework with native multi-turn feedback iteration.</p>
+      <p>An Agent code evaluation framework with native multi-turn feedback iteration.</p>
     </td>
   </tr>
 </table>
@@ -16,7 +16,7 @@
 
 Mainstream code benchmarks use snapshot-style evaluation — one input, one output. But real-world programming involves iterating based on compiler errors, test failures, and other feedback. **This feedback-driven iteration is the core of programming ability.**
 
-Otter integrates evaluation feedback into the evaluation loop, letting LLMs work like real developers: write code → run → read errors → fix → run again, until the tests pass or the maximum number of turns is reached.
+Otter integrates evaluation feedback into the evaluation loop, letting agents work like real developers: write code → run → read errors → fix → run again, until the tests pass or the maximum number of turns is reached.
 
 ```
    ┌────────────────────────────┐
@@ -38,7 +38,7 @@ pip install -e .
 
 # Configure
 cp .env.example .env
-# Edit .env with your LLM API credentials
+# Edit .env with your API credentials
 
 # Run evaluation
 otter run
@@ -56,19 +56,19 @@ otter run --env .env.local   # specify a config file
 ### Required
 
 ```ini
-LLM__api_key=sk-xxx
-LLM__base_url=https://api.openai.com/v1
-LLM__model=gpt-4o
+EXECUTOR__api_key=sk-xxx
+EXECUTOR__base_url=https://api.openai.com/v1
+EXECUTOR__model=gpt-4o
 ```
 
 ### Optional
 
 | Variable | Default | Description |
 |---|---|---|
-| `LLM__llm_type` | `openai_compatible` | LLM interface type |
-| `LLM__concurrency` | `1` | Max concurrent LLM requests |
-| `LLM__max_retries` | `3` | API call retry attempts |
-| `LLM__retry_base_delay` | `1.0` | Retry backoff base delay (seconds) |
+| `EXECUTOR__executor_type` | `chat_llm` | executor type |
+| `EXECUTOR__concurrency` | `1` | Max concurrent executor executions |
+| `EXECUTOR__max_retries` | `3` | API call retry attempts |
+| `EXECUTOR__retry_base_delay` | `1.0` | Retry backoff base delay (seconds) |
 | `EXPERIMENT__experiment_id` | `default` | Experiment ID, results saved to `experiments/{id}/` |
 | `EXPERIMENT__max_turns` | `1` | Max feedback iteration turns |
 | `EXPERIMENT__samples_per_problem` | `1` | Independent samples per problem |
@@ -90,10 +90,10 @@ Results are saved under `experiments/` as a directory tree, with a full record f
 experiments/{experiment_id}/
 └── {task_id}#{sample_id}/
     ├── turn_1/
-    │   ├── llm_input/    # Prompt sent to the LLM
-    │   ├── llm_output/   # Raw LLM response
-    │   ├── eval_input/    # Code script to execute
-    │   ├── eval_output/   # Execution results (stdout/stderr/returncode)
+    │   ├── exec_input/    #
+    │   ├── exec_output/   #
+    │   ├── eval_input/    #
+    │   ├── eval_output/   #
     │   └── meta.json     # Turn verdict {"passed": true/false}
     ├── turn_2/           # Turn 2 (if turn 1 failed and max_turns > 1)
     │   └── ...
