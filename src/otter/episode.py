@@ -4,6 +4,8 @@ from typing import get_type_hints, get_args
 import json
 import shutil
 
+from otter.config.setting import get_settings
+
 
 def _is_path_field(hint) -> bool:
     """判断类型注解是否包含 Path（支持 Path | None 等联合类型）。"""
@@ -105,13 +107,14 @@ EXPERIMENT_META = "experiment.json"
 
 @dataclass
 class Turn:
+    turn_dir: Path
+    passed: bool | None = None
     prop_input_path: Path | None = None
     prop_output_path: Path | None = None
     exec_input_path: Path | None = None
     exec_output_path: Path | None = None
     eval_input_path: Path | None = None
     eval_output_path: Path | None = None
-    passed: bool | None = None
     prop_input_manifest: PropInputManifest | None = None
     prop_output_manifest: PropOutputManifest | None = None
     exec_input_manifest: ExecInputManifest | None = None
@@ -119,20 +122,33 @@ class Turn:
     eval_input_manifest: EvalInputManifest | None = None
     eval_output_manifest: EvalOutputManifest | None = None
 
-    @property
-    def turn_dir(self) -> Path | None:
-        for p in (self.prop_input_path, self.exec_input_path):
-            if p is not None:
-                return p.parent
-        return None
+    def setup_dirs(self) -> None:
+        """根据 settings 按需创建子目录，并设置对应的 path 字段。"""
+        settings = get_settings()
+        self.turn_dir.mkdir(parents=True, exist_ok=True)
+
+        if settings.proposer is not None:
+            self.prop_input_path = self.turn_dir / "prop_input"
+            self.prop_output_path = self.turn_dir / "prop_output"
+            self.prop_input_path.mkdir(exist_ok=True)
+            self.prop_output_path.mkdir(exist_ok=True)
+
+        if settings.executor is not None:
+            self.exec_input_path = self.turn_dir / "exec_input"
+            self.exec_output_path = self.turn_dir / "exec_output"
+            self.exec_input_path.mkdir(exist_ok=True)
+            self.exec_output_path.mkdir(exist_ok=True)
+
+        if settings.evaluator is not None:
+            self.eval_input_path = self.turn_dir / "eval_input"
+            self.eval_output_path = self.turn_dir / "eval_output"
+            self.eval_input_path.mkdir(exist_ok=True)
+            self.eval_output_path.mkdir(exist_ok=True)
 
     def save_meta(self) -> None:
         """写入 meta.json，标记 turn 完成。"""
-        turn_dir = self.turn_dir
-        if not turn_dir:
-            raise ValueError("Turn has no directory")
         meta = {"passed": self.passed}
-        (turn_dir / META_FILENAME).write_text(
+        (self.turn_dir / META_FILENAME).write_text(
             json.dumps(meta, ensure_ascii=False), encoding="utf-8",
         )
 
@@ -163,36 +179,12 @@ class Episode:
     def exhausted(self, max_turns: int) -> bool:
         return self.total_turns >= max_turns
 
-    def next_turn(self, has_proposer: bool = False) -> None:
+    def next_turn(self) -> None:
         """创建下一个 Turn，建立目录结构，append 到 turns。"""
         turn_dir = self.base_dir / f"turn_{len(self.turns) + 1}"
-
-        prop_input_dir = None
-        prop_output_dir = None
-        if has_proposer:
-            prop_input_dir = turn_dir / "prop_input"
-            prop_output_dir = turn_dir / "prop_output"
-            prop_input_dir.mkdir(parents=True, exist_ok=True)
-            prop_output_dir.mkdir(parents=True, exist_ok=True)
-
-        exec_input_dir = turn_dir / "exec_input"
-        exec_output_dir = turn_dir / "exec_output"
-        eval_input_dir = turn_dir / "eval_input"
-        eval_output_dir = turn_dir / "eval_output"
-
-        exec_input_dir.mkdir(parents=True, exist_ok=True)
-        exec_output_dir.mkdir(parents=True, exist_ok=True)
-        eval_input_dir.mkdir(parents=True, exist_ok=True)
-        eval_output_dir.mkdir(parents=True, exist_ok=True)
-
-        self.turns.append(Turn(
-            prop_input_path=prop_input_dir,
-            prop_output_path=prop_output_dir,
-            exec_input_path=exec_input_dir,
-            exec_output_path=exec_output_dir,
-            eval_input_path=eval_input_dir,
-            eval_output_path=eval_output_dir,
-        ))
+        turn = Turn(turn_dir=turn_dir)
+        turn.setup_dirs()
+        self.turns.append(turn)
 
     @classmethod
     def sync_all(cls, output_dir: Path) -> dict[str, "Episode"]:
@@ -240,13 +232,14 @@ class Episode:
                 meta = json.loads(meta_path.read_text(encoding="utf-8"))
 
                 turns.append(Turn(
+                    turn_dir=turn_dir,
+                    passed=meta.get("passed"),
                     prop_input_path=prop_input_dir if prop_input_dir.exists() else None,
                     prop_output_path=prop_output_dir if prop_output_dir.exists() else None,
                     exec_input_path=exec_input_dir if exec_input_dir.exists() else None,
                     exec_output_path=exec_output_dir if exec_output_dir.exists() else None,
                     eval_input_path=eval_input_dir if eval_input_dir.exists() else None,
                     eval_output_path=eval_output_dir if eval_output_dir.exists() else None,
-                    passed=meta.get("passed"),
                     prop_input_manifest=_load_manifest(prop_input_dir, PropInputManifest),
                     prop_output_manifest=_load_manifest(prop_output_dir, PropOutputManifest),
                     exec_input_manifest=_load_manifest(exec_input_dir, ExecInputManifest),

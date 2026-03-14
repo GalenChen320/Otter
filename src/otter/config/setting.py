@@ -216,10 +216,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="ignore")
     dataset: DatasetSettings
     log: LoggerSettings
-    executor: ExecutorSettings
-    evaluator: EvaluatorSettings
     experiment: ExperimentSettings
     proposer: ProposerSettings | None = None
+    executor: ExecutorSettings | None = None
+    evaluator: EvaluatorSettings | None = None
 
 
 _settings: Settings | None = None
@@ -240,22 +240,36 @@ def init_settings(env_file: str = ".env") -> Settings:
 
 def _build_settings(env_file: str) -> Settings:
     env = (ROOT_DIR / env_file).resolve()
+
     proposer = None
     try:
         proposer = ProposerSettings(_env_file=env)
     except Exception:
         pass
+
+    executor = None
+    try:
+        executor = ExecutorSettings(_env_file=env)
+    except Exception:
+        pass
+
+    evaluator = None
+    try:
+        evaluator = EvaluatorSettings(
+            _env_file=env,
+            docker=DockerSettings(_env_file=env),
+        )
+    except Exception:
+        pass
+
     return Settings(
         _env_file=env,
         dataset=DatasetSettings(_env_file=env),
-        executor=ExecutorSettings(_env_file=env),
         log=LoggerSettings(_env_file=env),
-        evaluator=EvaluatorSettings(
-            _env_file=env,
-            docker=DockerSettings(_env_file=env),
-        ),
         experiment=ExperimentSettings(_env_file=env),
         proposer=proposer,
+        executor=executor,
+        evaluator=evaluator,
     )
 
 
