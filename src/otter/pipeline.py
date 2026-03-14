@@ -1,6 +1,10 @@
 import asyncio
 import json
 
+from rich.console import Console
+from rich.panel import Panel
+from rich.prompt import Confirm
+
 from otter import dataset
 from otter import llm
 from otter import environment
@@ -140,13 +144,31 @@ def verify_or_create_experiment_meta(output_dir) -> None:
         old_val = saved.get(key)
         new_val = current.get(key)
         if old_val != new_val:
-            diffs.append(f"  {key}: {old_val!r} -> {new_val!r}")
+            diffs.append(f"  {key}: {old_val!r} → {new_val!r}")
 
     if diffs:
-        raise RuntimeError(
-            "Tracked config mismatch with existing experiment. "
-            "Use a new experiment_id or fix your config.\n" + "\n".join(diffs)
+        console = Console(stderr=True)
+        console.print(
+            Panel(
+                "\n".join(diffs),
+                title="[bold yellow]Config Mismatch[/bold yellow]",
+                subtitle=str(meta_path),
+                border_style="yellow",
+            )
         )
+        if Confirm.ask(
+            "[yellow]Override experiment meta with current config?[/yellow]",
+            default=False,
+            console=console,
+        ):
+            meta_path.write_text(
+                json.dumps(current, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            logger.info("experiment meta overridden: %s", meta_path)
+        else:
+            raise SystemExit(1)
+
     logger.info("experiment meta verified: %s", meta_path)
 
 
