@@ -77,24 +77,31 @@ async def run_turn(
 ) -> None:
     """执行单轮：创建 Turn → prepare → generate → prepare → execute → judge。"""
     logger = get_logger()
-    ep.next_turn()
 
+    # Step 1: make new turn
+    ep.next_turn()
     logger.info("[%s] turn %d queued", ep.eid, ep.total_turns)
 
-    # Step 2: Executor run
+    # Step 2: Prpopser run
+    # ds.prepare_prop_input(ep)
+    # async with prop_semaphore:
+    #     logger.info("[%s] turn %d proposing...", ep.eid, ep.total_turns)
+    #     await prop_client.run(ep)
+
+    # Step 3: Executor run
     ds.prepare_exec_input(ep)
     async with exec_semaphore:
         logger.info("[%s] turn %d executing...", ep.eid, ep.total_turns)
         await exec_client.run(ep)
 
-    # Step 3: Evaluator run
+    # Step 4: Evaluator run
     ds.prepare_eval_input(ep)
     async with eval_semaphore:
         logger.info("[%s] turn %d evaluating...", ep.eid, ep.total_turns)
         await eval_client.run(ep)
 
+    # Step 5: make judgement
     await ds.make_judgement(ep)
-
     logger.info("[%s] turn %d completed (passed=%s)",
                 ep.eid, ep.total_turns, ep.turns[-1].passed)
 
