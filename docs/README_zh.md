@@ -110,7 +110,7 @@ experiments/{experiment_id}/
 | [SWE-Bench](https://www.swebench.com/) | 计划中 | 真实 GitHub Issue 修复 |
 | [Tau2Bench](https://github.com/sierra-research/tau2-bench) | 计划中 | 多轮智能体任务评测 |
 | [TerminalBench](https://terminalbench.com/) | 计划中 | 终端环境编程任务 |
-| [SWE-CI](https://github.com/SWE-CI/SWE-CI) | 计划中 | CI 驱动的软件工程任务 |
+| [SWE-CI](https://arxiv.org/abs/2603.03823) | 计划中 | CI 驱动的软件工程任务 |
 
 ## 许可证
 

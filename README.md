@@ -110,7 +110,7 @@ experiments/{experiment_id}/
 | [SWE-Bench](https://www.swebench.com/) | Planned | Real-world GitHub issue resolution |
 | [Tau2Bench](https://github.com/sierra-research/tau2-bench) | Planned | Multi-turn agentic task evaluation |
 | [TerminalBench](https://terminalbench.com/) | Planned | Terminal-based coding tasks |
-| [SWE-CI](https://github.com/SWE-CI/SWE-CI) | Planned | CI-driven software engineering tasks |
+| [SWE-CI](https://arxiv.org/abs/2603.03823) | Planned | CI-driven software engineering tasks |
 
 ## License
 
