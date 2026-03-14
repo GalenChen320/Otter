@@ -4,8 +4,8 @@ from datasets import load_dataset
 from otter.dataset.base import BaseDataset
 from otter.dataset.utils import extract_code
 from otter.config.setting import get_settings
-from otter.episode import Episode, EnvInputManifest, LLMInputManifest
-from otter.environment.docker import DockerEnvironment
+from otter.episode import Episode, EvalInputManifest, LLMInputManifest
+from otter.evaluator.docker import DockerEvaluator
 from otter.logger import get_logger
 
 
@@ -41,14 +41,14 @@ class EvalPlusDataset(BaseDataset):
             self._problems[p.task_id] = p
         logger.info("loaded dataset evalplus: %d problems", len(self._problems))
 
-        await DockerEnvironment.build_image(
+        await DockerEvaluator.build_image(
             self.IMAGE_TAG,
             "FROM python:3.11-slim\n"
             "RUN pip install uv && uv pip install --system numpy==2.2.3\n",
         )
 
     async def teardown(self) -> None:
-        await DockerEnvironment.remove_image(self.IMAGE_TAG)
+        await DockerEvaluator.remove_image(self.IMAGE_TAG)
 
     @property
     def task_ids(self) -> list[str]:
@@ -76,7 +76,7 @@ class EvalPlusDataset(BaseDataset):
 
         return LLMInputManifest(prompt_file=prompt_file)
 
-    def _prepare_env_input(self, episode: Episode) -> EnvInputManifest:
+    def _prepare_eval_input(self, episode: Episode) -> EvalInputManifest:
         turn = episode.turns[-1]
         llm_output_manifest = turn.llm_output_manifest
 
@@ -93,10 +93,10 @@ class EvalPlusDataset(BaseDataset):
             f"check({problem.entry_point})\n"
         )
 
-        script_file = turn.env_input_path / "solution.py"
+        script_file = turn.eval_input_path / "solution.py"
         script_file.write_text(full_code, encoding="utf-8")
 
-        return EnvInputManifest(
+        return EvalInputManifest(
             image_tag=self.IMAGE_TAG,
             script_file=script_file,
             commands=["python /tmp/solution.py"],
@@ -104,9 +104,9 @@ class EvalPlusDataset(BaseDataset):
 
     async def _judge(self, episode: Episode) -> None:
         turn = episode.turns[-1]
-        env_output = turn.env_output_manifest
+        eval_output = turn.eval_output_manifest
 
-        if not env_output:
-            raise ValueError("EvalPlusDataset requires EnvOutputManifest")
+        if not eval_output:
+            raise ValueError("EvalPlusDataset requires EvalOutputManifest")
 
-        turn.passed = env_output.returncode == 0 and not env_output.timed_out
+        turn.passed = eval_output.returncode == 0 and not eval_output.timed_out

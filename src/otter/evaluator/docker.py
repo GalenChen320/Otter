@@ -3,9 +3,9 @@ from uuid import uuid4
 from pathlib import Path
 
 from otter.config.setting import get_settings
-from otter.episode import Episode, EnvOutputManifest
-from otter.environment.base import BaseEnvironment
-from otter.environment.utils.docker_utils import (
+from otter.episode import Episode, EvalOutputManifest
+from otter.evaluator.base import BaseEvaluator
+from otter.evaluator.utils.docker_utils import (
     get_docker_storage_device,
     build_image,
     remove_image,
@@ -18,7 +18,7 @@ from otter.environment.utils.docker_utils import (
 )
 
 
-class DockerEnvironment(BaseEnvironment):
+class DockerEvaluator(BaseEvaluator):
 
     @staticmethod
     def _parse_size(value: str) -> int:
@@ -30,7 +30,7 @@ class DockerEnvironment(BaseEnvironment):
         return int(value)
 
     def __init__(self):
-        docker_cfg = get_settings().environment.docker
+        docker_cfg = get_settings().evaluator.docker
         self._timeout = docker_cfg.timeout
         self._container_params: dict = {
             "stdin_open": True,
@@ -64,19 +64,19 @@ class DockerEnvironment(BaseEnvironment):
         """删除镜像。"""
         await remove_image(image_tag, missing_ok=missing_ok)
 
-    async def _execute(self, episode: Episode) -> EnvOutputManifest:
-        """从 env_input_manifest 读取执行规格，创建容器执行，返回 EnvOutputManifest。"""
+    async def _execute(self, episode: Episode) -> EvalOutputManifest:
+        """从 eval_input_manifest 读取执行规格，创建容器执行，返回 EvalOutputManifest。"""
         turn = episode.turns[-1]
-        manifest = turn.env_input_manifest
+        manifest = turn.eval_input_manifest
 
         if not manifest:
-            raise ValueError("DockerEnvironment requires EnvInputManifest")
+            raise ValueError("DockerEvaluator requires EvalInputManifest")
         if not manifest.image_tag:
-            raise ValueError("DockerEnvironment requires 'image_tag' in EnvInputManifest")
+            raise ValueError("DockerEvaluator requires 'image_tag' in EvalInputManifest")
 
         timeout = manifest.timeout or self._timeout
         container_name = f"otter-{uuid4().hex[:8]}"
-        env_output_dir = turn.env_output_path
+        eval_output_dir = turn.eval_output_path
 
         try:
             await create_container(
@@ -97,13 +97,13 @@ class DockerEnvironment(BaseEnvironment):
                         exec_container(container_name, cmd), timeout=timeout,
                     )
                 except asyncio.TimeoutError:
-                    return self._make_env_output(env_output_dir, "", f"Command timed out after {timeout}s: {cmd}", -1, True)
+                    return self._make_eval_output(eval_output_dir, "", f"Command timed out after {timeout}s: {cmd}", -1, True)
                 if last_result.returncode != 0:
-                    return self._make_env_output(env_output_dir, last_result.stdout, last_result.stderr, last_result.returncode, False)
+                    return self._make_eval_output(eval_output_dir, last_result.stdout, last_result.stderr, last_result.returncode, False)
 
             # 成功
-            return self._make_env_output(
-                env_output_dir,
+            return self._make_eval_output(
+                eval_output_dir,
                 last_result.stdout if last_result else "",
                 last_result.stderr if last_result else "",
                 last_result.returncode if last_result else 0,
@@ -111,21 +111,21 @@ class DockerEnvironment(BaseEnvironment):
             )
 
         except Exception as e:
-            return self._make_env_output(env_output_dir, "", str(e), -1, False)
+            return self._make_eval_output(eval_output_dir, "", str(e), -1, False)
 
         finally:
             await remove_container(container_name, force=True, missing_ok=True)
 
     @staticmethod
-    def _make_env_output(env_output_dir: Path, stdout: str, stderr: str, returncode: int, timed_out: bool) -> EnvOutputManifest:
-        """写入 stdout/stderr 文件，返回 EnvOutputManifest。"""
-        stdout_file = env_output_dir / "stdout.txt"
-        stderr_file = env_output_dir / "stderr.txt"
+    def _make_eval_output(eval_output_dir: Path, stdout: str, stderr: str, returncode: int, timed_out: bool) -> EvalOutputManifest:
+        """写入 stdout/stderr 文件，返回 EvalOutputManifest。"""
+        stdout_file = eval_output_dir / "stdout.txt"
+        stderr_file = eval_output_dir / "stderr.txt"
 
         stdout_file.write_text(stdout, encoding="utf-8")
         stderr_file.write_text(stderr, encoding="utf-8")
 
-        return EnvOutputManifest(
+        return EvalOutputManifest(
             stdout_file=stdout_file,
             stderr_file=stderr_file,
             returncode=returncode,

@@ -16,15 +16,16 @@
 
 主流代码评测集采用快照式评估——给一次输入，出一次结果。但真实编程中，开发者会根据编译错误、测试失败等反馈反复修改代码。**这个反馈驱动的迭代过程才是编程能力的核心体现。**
 
-Otter 将环境反馈集成进评测流程，让 LLM 像真实开发者一样：写代码 → 运行 → 看报错 → 修改 → 再运行，直到通过或达到最大轮次。
+Otter 将执行反馈集成进评测流程，让 LLM 像真实开发者一样：写代码 → 运行 → 看报错 → 修改 → 再运行，直到通过或达到最大轮次。
 
 ```
-      ┌──────────── Feedback ────────────┐
-      │                                  │
-      ↓                                  │
-   Prompt ──→ LLM ──→ Code ──→ Environment ──→ 通过？──→ 结束
-                                                 │
-                                                 └─→ 未通过，继续循环
+   ┌────────────────────────────┐
+   ↓                            │
+Proposer ───→ Executor ───→ Evaluator
+                                │
+          达到最大轮次/完全解决问题 │
+                                ↓
+                               结束
 ```
 
 ## 快速开始
@@ -91,8 +92,8 @@ experiments/{experiment_id}/
     ├── turn_1/
     │   ├── llm_input/    # 发给 LLM 的 prompt
     │   ├── llm_output/   # LLM 返回的原始响应
-    │   ├── env_input/    # 实际执行的代码脚本
-    │   ├── env_output/   # 执行结果（stdout/stderr/returncode）
+    │   ├── eval_input/    # 实际执行的代码脚本
+    │   ├── eval_output/   # 执行结果（stdout/stderr/returncode）
     │   └── meta.json     # 本轮判定结果 {"passed": true/false}
     ├── turn_2/           # 第二轮（如果第一轮未通过且 max_turns > 1）
     │   └── ...
