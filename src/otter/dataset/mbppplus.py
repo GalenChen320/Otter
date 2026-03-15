@@ -4,8 +4,8 @@ from datasets import load_dataset
 from otter.dataset.base import BaseDataset
 from otter.dataset.utils import extract_code
 from otter.config.setting import get_settings
-from otter.episode import Episode, EvalInputManifest, ExecInputManifest
-from otter.evaluator.docker import DockerEvaluator
+from otter.episode import Episode, InputManifest
+from otter.backend.docker import DockerBackend
 from otter.logger import get_logger
 
 
@@ -36,14 +36,14 @@ class MBPPPlusDataset(BaseDataset):
             self._problems[p.task_id] = p
         logger.info("loaded dataset mbppplus: %d problems", len(self._problems))
 
-        await DockerEvaluator.build_image(
+        await DockerBackend.build_image(
             self.IMAGE_TAG,
             "FROM python:3.11-slim\n"
             "RUN pip install uv && uv pip install --system numpy==2.2.3\n",
         )
 
     async def teardown(self) -> None:
-        await DockerEvaluator.remove_image(self.IMAGE_TAG)
+        await DockerBackend.remove_image(self.IMAGE_TAG)
 
     def _parse(self, row: dict) -> MBPPPlusProblem:
         return MBPPPlusProblem(
@@ -71,7 +71,7 @@ class MBPPPlusDataset(BaseDataset):
             f"Any import of a non-standard library will cause a runtime error."
         )
 
-    def _prepare_exec_input(self, episode: Episode) -> ExecInputManifest:
+    def _prepare_exec_input(self, episode: Episode) -> InputManifest:
         turn = episode.turns[-1]
 
         # 第一轮：写题目 prompt；后续轮次：写 feedback
@@ -83,14 +83,14 @@ class MBPPPlusDataset(BaseDataset):
         prompt_file = turn.exec_input_path / "prompt.txt"
         prompt_file.write_text(prompt, encoding="utf-8")
 
-        return ExecInputManifest(prompt_file=prompt_file)
+        return InputManifest(prompt_file=prompt_file)
 
-    def _prepare_eval_input(self, episode: Episode) -> EvalInputManifest:
+    def _prepare_eval_input(self, episode: Episode) -> InputManifest:
         turn = episode.turns[-1]
         exec_output_manifest = turn.exec_output_manifest
 
         if not exec_output_manifest or not exec_output_manifest.exec_output_file:
-            raise ValueError("MBPPPlusDataset requires 'exec_output_file' in ExecOutputManifest")
+            raise ValueError("MBPPPlusDataset requires 'exec_output_file' in OutputManifest")
 
         # 从 exec_output manifest 读取 response
         response = exec_output_manifest.exec_output_file.read_text(encoding="utf-8")
@@ -104,7 +104,7 @@ class MBPPPlusDataset(BaseDataset):
         script_file = turn.eval_input_path / "solution.py"
         script_file.write_text(full_code, encoding="utf-8")
 
-        return EvalInputManifest(
+        return InputManifest(
             image_tag=self.IMAGE_TAG,
             script_file=script_file,
             commands=["python /tmp/solution.py"],
@@ -115,6 +115,6 @@ class MBPPPlusDataset(BaseDataset):
         eval_output = turn.eval_output_manifest
 
         if not eval_output:
-            raise ValueError("MBPPPlusDataset requires EvalOutputManifest")
+            raise ValueError("MBPPPlusDataset requires OutputManifest")
 
         turn.passed = eval_output.returncode == 0 and not eval_output.timed_out

@@ -6,9 +6,9 @@ from rich.panel import Panel
 from rich.prompt import Confirm
 
 from otter import dataset
-from otter import executor
-from otter import evaluator
-from otter import proposer
+from otter.backend.chat_llm import ChatLLMBackend
+from otter.backend.docker import DockerBackend
+from otter.role import ProposerRole, ExecutorRole, EvaluatorRole
 from otter.config.setting import get_settings, get_tracked_config
 from otter.episode import Episode, EXPERIMENT_META
 from otter.logger import get_logger
@@ -24,29 +24,48 @@ def create_dataset() -> dataset.BaseDataset:
             raise ValueError(f"unknown dataset: {settings.dataset.dataset_name}")
 
 
-def create_executor() -> executor.BaseExecutor | None:
+def create_executor() -> ExecutorRole | None:
     settings = get_settings()
     if settings.executor_type is None:
         return None
     match settings.executor_type:
         case "chat_llm":
-            return executor.ChatLLMExecutor()
+            es = settings.executor
+            backend = ChatLLMBackend(
+                api_key=es.api_key,
+                base_url=es.base_url,
+                model=es.model,
+                max_retries=es.max_retries,
+                retry_base_delay=es.retry_base_delay,
+            )
+            return ExecutorRole(backend)
         case _:
             raise ValueError(f"unknown executor_type: {settings.executor_type}")
 
 
-def create_evaluator() -> evaluator.BaseEvaluator | None:
+def create_evaluator() -> EvaluatorRole | None:
     settings = get_settings()
     if settings.evaluator_type is None:
         return None
     match settings.evaluator_type:
         case "docker":
-            return evaluator.DockerEvaluator()
+            ds = settings.evaluator.docker
+            backend = DockerBackend(
+                timeout=ds.timeout,
+                network_mode=ds.network_mode,
+                cpus=ds.cpus,
+                memory=ds.memory,
+                memory_swap=ds.memory_swap,
+                memory_reservation=ds.memory_reservation,
+                device_read_bps=ds.device_read_bps,
+                device_write_bps=ds.device_write_bps,
+            )
+            return EvaluatorRole(backend)
         case _:
             raise ValueError(f"unknown evaluator_type: {settings.evaluator_type}")
 
 
-def create_proposer() -> proposer.BaseProposer | None:
+def create_proposer() -> ProposerRole | None:
     settings = get_settings()
     if settings.proposer_type is None:
         return None
@@ -84,9 +103,9 @@ def get_pending_episodes(ds: dataset.BaseDataset) -> list[Episode]:
 async def run_turn(
     ds: dataset.BaseDataset,
     ep: Episode,
-    prop_client: proposer.BaseProposer | None = None,
-    exec_client: executor.BaseExecutor | None = None,
-    eval_client: evaluator.BaseEvaluator | None = None,
+    prop_client: ProposerRole | None = None,
+    exec_client: ExecutorRole | None = None,
+    eval_client: EvaluatorRole | None = None,
     prop_semaphore: asyncio.Semaphore | None = None,
     exec_semaphore: asyncio.Semaphore | None = None,
     eval_semaphore: asyncio.Semaphore | None = None,
@@ -127,9 +146,9 @@ async def run_turn(
 
 async def run(
     ds: dataset.BaseDataset,
-    prop_client: proposer.BaseProposer | None = None,
-    exec_client: executor.BaseExecutor | None = None,
-    eval_client: evaluator.BaseEvaluator | None = None,
+    prop_client: ProposerRole | None = None,
+    exec_client: ExecutorRole | None = None,
+    eval_client: EvaluatorRole | None = None,
 ) -> list[Episode]:
     settings = get_settings()
     logger = get_logger()
