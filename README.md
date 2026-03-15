@@ -65,7 +65,9 @@ EXECUTOR__model=gpt-4o
 
 | Variable | Default | Description |
 |---|---|---|
-| `EXECUTOR__executor_type` | `chat_llm` | executor type |
+| `PROPOSER_TYPE` | — | Proposer type, empty to disable |
+| `EXECUTOR_TYPE` | — | Executor type (e.g. `chat_llm`), empty to disable |
+| `EVALUATOR_TYPE` | — | Evaluator type (e.g. `docker`), empty to disable |
 | `EXECUTOR__concurrency` | `1` | Max concurrent executor executions |
 | `EXECUTOR__max_retries` | `3` | API call retry attempts |
 | `EXECUTOR__retry_base_delay` | `1.0` | Retry backoff base delay (seconds) |

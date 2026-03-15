@@ -39,12 +39,6 @@ class ExecutorSettings(BaseSettings):
     model: str = tracked_field(
         description="Model name to use for generation"
     )
-    executor_type: Literal[
-        "chat_llm"
-    ] = tracked_field(
-        default="chat_llm",
-        description="Executor client type"
-    )
     concurrency: int = untracked_field(
         default=1,
         description="Max concurrent executor executions"
@@ -112,12 +106,6 @@ class EvaluatorSettings(BaseSettings):
         env_prefix="EVALUATOR__", 
         extra="ignore"
     )
-    evaluator_type: Literal[
-        "docker"
-    ] = tracked_field(
-        default="docker",
-        description="Execution evaluator type"
-    )
     concurrency: int = untracked_field(
         default=1,
         description="Max concurrent evaluator executions"
@@ -147,9 +135,6 @@ class ProposerSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="PROPOSER__",
         extra="ignore"
-    )
-    proposer_type: str = tracked_field(
-        description="Proposer type"
     )
     concurrency: int = untracked_field(
         default=1,
@@ -199,6 +184,25 @@ class Settings(BaseSettings):
         description="Independent samples per problem"
     )
 
+    # ── Component type selectors (None = disabled) ──
+    proposer_type: str | None = tracked_field(
+        default=None,
+        description="Proposer type, None to disable"
+    )
+    executor_type: str | None = tracked_field(
+        default=None,
+        description="Executor client type, None to disable"
+    )
+    evaluator_type: str | None = tracked_field(
+        default=None,
+        description="Evaluator type, None to disable"
+    )
+
+    @field_validator("proposer_type", "executor_type", "evaluator_type", mode="before")
+    @classmethod
+    def _empty_str_to_none(cls, v: Any) -> Any:
+        return _coerce_empty_str(v)
+
     @property
     def output_dir(self) -> Path:
         return ROOT_DIR / "experiments" / self.experiment_id
@@ -230,31 +234,33 @@ def init_settings(env_file: str = ".env") -> Settings:
 def _build_settings(env_file: str) -> Settings:
     env = (ROOT_DIR / env_file).resolve()
 
-    proposer = None
-    try:
-        proposer = ProposerSettings(_env_file=env)
-    except Exception:
-        pass
-
-    executor = None
-    try:
-        executor = ExecutorSettings(_env_file=env)
-    except Exception:
-        pass
-
-    evaluator = None
-    try:
-        evaluator = EvaluatorSettings(
-            _env_file=env,
-            docker=DockerSettings(_env_file=env),
-        )
-    except Exception:
-        pass
-
-    return Settings(
+    # 先构建顶层 settings 以读取 type 字段
+    top = Settings(
         _env_file=env,
         dataset=DatasetSettings(_env_file=env),
         log=LoggerSettings(_env_file=env),
+    )
+
+    proposer = (
+        ProposerSettings(_env_file=env)
+        if top.proposer_type is not None else None
+    )
+    executor = (
+        ExecutorSettings(_env_file=env)
+        if top.executor_type is not None else None
+    )
+    evaluator = (
+        EvaluatorSettings(
+            _env_file=env,
+            docker=DockerSettings(_env_file=env),
+        )
+        if top.evaluator_type is not None else None
+    )
+
+    return Settings(
+        _env_file=env,
+        dataset=top.dataset,
+        log=top.log,
         proposer=proposer,
         executor=executor,
         evaluator=evaluator,
