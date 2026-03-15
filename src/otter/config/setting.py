@@ -1,145 +1,14 @@
 from pathlib import Path
 from typing import Literal, Any
-
-from pydantic import Field, field_validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from .backend_settings import *
+from .dataset_settings import *
+from .utils import (
+    ROOT_DIR, tracked_field, untracked_field, coerce_empty_str
+    ) 
 
-ROOT_DIR = Path(__file__).parent.parent.parent.parent
-_REQUIRED = ...
-
-def tracked_field(default=_REQUIRED, **kwargs) -> Any:
-    extra = kwargs.pop("json_schema_extra", {})
-    return Field(default, json_schema_extra={"core": True, **extra}, **kwargs)
-
-
-def untracked_field(default=_REQUIRED, **kwargs) -> Any:
-    extra = kwargs.pop("json_schema_extra", {})
-    return Field(default, json_schema_extra={"core": False, **extra}, **kwargs)
-
-
-def _coerce_empty_str(v: Any) -> Any:
-    """将空字符串转为 None，用于 Optional 字段的 field_validator。"""
-    if isinstance(v, str) and v.strip() == "":
-        return None
-    return v
-
-
-class ExecutorSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_prefix="EXECUTOR__", 
-        extra="ignore"
-    )
-    api_key: str = untracked_field(
-        description="API key for the LLM provider"
-    )
-    base_url: str = tracked_field(
-        description="Base URL of the LLM API endpoint"
-    )
-    model: str = tracked_field(
-        description="Model name to use for generation"
-    )
-    concurrency: int = untracked_field(
-        default=1,
-        description="Max concurrent executor executions"
-    )
-    max_retries: int = tracked_field(
-        default=3, ge=1,
-        description="Max retries on API failure"
-    )
-    retry_base_delay: float = tracked_field(
-        default=1.0,
-        description="Base delay in seconds for exponential backoff"
-    )
-
-
-class DockerSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_prefix="DOCKER__",
-        extra="ignore"
-    )
-    cpus: float | None = tracked_field(
-        default=1.0,
-        description="CPU cores allocated per container"
-    )
-    memory: str | None = tracked_field(
-        default="512m",
-        description="Memory limit per container"
-    )
-    memory_swap: str | None = tracked_field(
-        default="512m",
-        description="Swap limit per container"
-    )
-    memory_reservation: str | None = tracked_field(
-        default="256m",
-        description="Soft memory limit per container"
-    )
-    network_mode: str | None = tracked_field(
-        default="none",
-        description="Container network mode"
-    )
-    device_read_bps: str | None = tracked_field(
-        default="128m",
-        description="Device read rate limit"
-    )
-    device_write_bps: str | None = tracked_field(
-        default="128m",
-        description="Device write rate limit"
-    )
-    timeout: int = tracked_field(
-        default=10,
-        description="Command execution timeout in seconds"
-    )
-
-    @field_validator(
-        "cpus", "memory", "memory_swap", "memory_reservation",
-        "network_mode", "device_read_bps", "device_write_bps",
-        mode="before",
-    )
-    @classmethod
-    def _empty_str_to_none(cls, v: Any) -> Any:
-        return _coerce_empty_str(v)
-
-
-class EvaluatorSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_prefix="EVALUATOR__", 
-        extra="ignore"
-    )
-    concurrency: int = untracked_field(
-        default=1,
-        description="Max concurrent evaluator executions"
-    )
-    docker: DockerSettings = DockerSettings()
-
-
-class DatasetSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_prefix="DATASET__", 
-        extra="ignore"
-    )
-    cache_dir: Path = untracked_field(
-        default=ROOT_DIR / "data" / "cache",
-        description="Local cache directory for downloaded datasets"
-    )
-    dataset_name: Literal[
-        "evalplus",
-        "mbppplus"
-    ] = tracked_field(
-        default="mbppplus",
-        description="Dataset to evaluate against"
-    )
-
-
-class ProposerSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_prefix="PROPOSER__",
-        extra="ignore"
-    )
-    concurrency: int = untracked_field(
-        default=1,
-        description="Max concurrent proposer executions"
-    )
 
 
 class LoggerSettings(BaseSettings):
@@ -160,11 +29,10 @@ class LoggerSettings(BaseSettings):
         default=None,
         description="Path to log file, stdout only if not set"
     )
-
     @field_validator("log_file", mode="before")
     @classmethod
     def _empty_str_to_none(cls, v: Any) -> Any:
-        return _coerce_empty_str(v)
+        return coerce_empty_str(v)
 
 
 class Settings(BaseSettings):
@@ -185,37 +53,56 @@ class Settings(BaseSettings):
     )
 
     # ── Component type selectors (None = disabled) ──
+    dataset_name: str = tracked_field(
+        default="mbppplus",
+        description="Dataset name to evaluate against"
+    )
     proposer_type: str | None = tracked_field(
         default=None,
-        description="Proposer type, None to disable"
+        description="Proposer backend type, None to disable"
     )
     executor_type: str | None = tracked_field(
         default=None,
-        description="Executor client type, None to disable"
+        description="Executor backend type, None to disable"
     )
     evaluator_type: str | None = tracked_field(
         default=None,
-        description="Evaluator type, None to disable"
+        description="Evaluator backend type, None to disable"
+    )
+
+    # ── Component concurrency ──
+    proposer_concurrency: int = untracked_field(
+        default=1,
+        description="Max concurrent proposer executions"
+    )
+    executor_concurrency: int = untracked_field(
+        default=1,
+        description="Max concurrent executor executions"
+    )
+    evaluator_concurrency: int = untracked_field(
+        default=1,
+        description="Max concurrent evaluator executions"
     )
 
     @field_validator("proposer_type", "executor_type", "evaluator_type", mode="before")
     @classmethod
     def _empty_str_to_none(cls, v: Any) -> Any:
-        return _coerce_empty_str(v)
+        return coerce_empty_str(v)
 
     @property
     def output_dir(self) -> Path:
         return ROOT_DIR / "experiments" / self.experiment_id
 
-    # ── Component settings ──
-    dataset: DatasetSettings
+    # ── Component settings (dynamically built per type) ──
     log: LoggerSettings
-    proposer: ProposerSettings | None = None
-    executor: ExecutorSettings | None = None
-    evaluator: EvaluatorSettings | None = None
+    dataset: DatasetSettings | None = None
+    proposer: BackendSettings | None = None
+    executor: BackendSettings | None = None
+    evaluator: BackendSettings | None = None
 
 
 _settings: Settings | None = None
+
 
 
 def get_settings() -> Settings:
@@ -231,39 +118,47 @@ def init_settings(env_file: str = ".env") -> Settings:
     return _settings
 
 
+def _build_backend_settings(
+    role_prefix: str,
+    backend_type: str | None,
+    env_file: Path,
+) -> BackendSettings | None:
+    """根据 backend_type 和角色前缀动态构建 Backend Settings。"""
+    if backend_type is None:
+        return None
+    cls = BACKEND_SETTINGS_REGISTRY.get(backend_type)
+    if cls is None:
+        raise ValueError(f"Unknown backend type: {backend_type!r}")
+    return cls(_env_prefix=f"{role_prefix}__", _env_file=env_file)
+
+
+def _build_dataset_settings(
+    dataset_name: str,
+    env_file: Path,
+) -> DatasetSettings:
+    """根据 dataset_name 动态构建 Dataset Settings。"""
+    cls = DATASET_SETTINGS_REGISTRY.get(dataset_name)
+    if cls is None:
+        raise ValueError(f"Unknown dataset type: {dataset_name!r}")
+    return cls(_env_prefix="DATASET__", _env_file=env_file)
+
+
 def _build_settings(env_file: str) -> Settings:
     env = (ROOT_DIR / env_file).resolve()
 
     # 先构建顶层 settings 以读取 type 字段
     top = Settings(
         _env_file=env,
-        dataset=DatasetSettings(_env_file=env),
         log=LoggerSettings(_env_file=env),
-    )
-
-    proposer = (
-        ProposerSettings(_env_file=env)
-        if top.proposer_type is not None else None
-    )
-    executor = (
-        ExecutorSettings(_env_file=env)
-        if top.executor_type is not None else None
-    )
-    evaluator = (
-        EvaluatorSettings(
-            _env_file=env,
-            docker=DockerSettings(_env_file=env),
-        )
-        if top.evaluator_type is not None else None
     )
 
     return Settings(
         _env_file=env,
-        dataset=top.dataset,
+        dataset=_build_dataset_settings(top.dataset_name, env),
         log=top.log,
-        proposer=proposer,
-        executor=executor,
-        evaluator=evaluator,
+        proposer=_build_backend_settings("PROPOSER", top.proposer_type, env),
+        executor=_build_backend_settings("EXECUTOR", top.executor_type, env),
+        evaluator=_build_backend_settings("EVALUATOR", top.evaluator_type, env),
     )
 
 
@@ -289,3 +184,10 @@ def get_tracked_config(settings: Settings | None = None) -> dict[str, Any]:
     raw = _collect_tracked(settings)
     # Path 等类型转 str 以便 JSON 序列化
     return {k: str(v) if isinstance(v, Path) else v for k, v in raw.items()}
+
+
+__all__ = [
+    "get_settings",
+    "init_settings",
+    "get_tracked_config"
+]
