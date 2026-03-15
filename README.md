@@ -53,35 +53,7 @@ otter run                    # uses .env by default
 otter run --env .env.local   # specify a config file
 ```
 
-### Required
-
-```ini
-EXECUTOR__api_key=sk-xxx
-EXECUTOR__base_url=https://api.openai.com/v1
-EXECUTOR__model=gpt-4o
-```
-
-### Optional
-
-| Variable | Default | Description |
-|---|---|---|
-| `PROPOSER_TYPE` | — | Proposer type, empty to disable |
-| `EXECUTOR_TYPE` | — | Executor type (e.g. `chat_llm`), empty to disable |
-| `EVALUATOR_TYPE` | — | Evaluator type (e.g. `docker`), empty to disable |
-| `EXECUTOR__concurrency` | `1` | Max concurrent executor executions |
-| `EXECUTOR__max_retries` | `3` | API call retry attempts |
-| `EXECUTOR__retry_base_delay` | `1.0` | Retry backoff base delay (seconds) |
-| `EXPERIMENT_ID` | `default` | Experiment ID, results saved to `experiments/{id}/` |
-| `MAX_TURNS` | `1` | Max feedback iteration turns |
-| `SAMPLES_PER_PROBLEM` | `1` | Independent samples per problem |
-| `DATASET__dataset_name` | `mbppplus` | Dataset name |
-| `DATASET__cache_dir` | `data/cache` | Dataset cache directory |
-| `DOCKER__cpus` | `1.0` | Container CPU limit |
-| `DOCKER__memory` | `512m` | Container memory limit |
-| `DOCKER__network_mode` | `none` | Container network mode |
-| `DOCKER__timeout` | `10` | Per-command execution timeout (seconds) |
-| `LOG__level` | `INFO` | Log level |
-| `LOG__log_file` | — | Log file path |
+See [Environment Variable Configuration](docs/en/env_config.md) for the full parameter reference.
 
 ## Output Structure
 
