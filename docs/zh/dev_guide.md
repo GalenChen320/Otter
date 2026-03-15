@@ -2,8 +2,6 @@
 
 本文档说明如何为 Otter 添加新的 **Backend** 或 **Dataset**。
 
-Otter 的三个角色（Proposer / Executor / Evaluator）是固定的，不需要扩展。真正变化的是角色绑定的 Backend 和评测使用的 Dataset。
-
 ---
 
 ## 添加新 Backend
