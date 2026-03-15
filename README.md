@@ -1,4 +1,4 @@
-**English** | [中文](docs/README_zh.md)
+**English** | [中文](docs/zh/README.md)
 
 <table>
   <tr>
