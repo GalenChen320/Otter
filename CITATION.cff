@@ -4,7 +4,7 @@ title: "Otter"
 abstract: "An agent code evaluation framework with native multi-turn feedback iteration."
 type: software
 license: Apache-2.0
-repository-code: "https://github.com/GalenChen320/CodeEval"
+repository-code: "https://github.com/GalenChen320/Otter"
 authors:
   - given-names: Jialong
     family-name: Chen
