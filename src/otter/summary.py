@@ -206,3 +206,6 @@ def show_summary(result: ExperimentSummary) -> None:
 
         console.print(table)
         console.print()
+
+
+__all__ = ["summarize", "show_summary"]

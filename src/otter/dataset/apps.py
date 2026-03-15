@@ -9,6 +9,3 @@ class APPSDataset(BaseDataset):
     async def setup(self) -> None:
         dataset = load_dataset("codeparrot/apps")
 
-
-if __name__ == "__main__":
-    apps = APPSDataset()
