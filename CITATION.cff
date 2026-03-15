@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Otter"
+abstract: "An agent code evaluation framework with native multi-turn feedback iteration."
+type: software
+license: Apache-2.0
+repository-code: "https://github.com/GalenChen320/CodeEval"
+authors:
+  - given-names: Jialong
+    family-name: Chen
+date-released: "2026-03-15"
