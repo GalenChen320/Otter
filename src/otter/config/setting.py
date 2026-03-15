@@ -187,6 +187,7 @@ def get_tracked_config(settings: Settings | None = None) -> dict[str, Any]:
 
 
 __all__ = [
+    "ROOT_DIR",
     "get_settings",
     "init_settings",
     "get_tracked_config"
