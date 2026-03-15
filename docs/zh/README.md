@@ -1,9 +1,9 @@
-[English](../README.md) | **中文**
+[English](../../README.md) | **中文**
 
 <table>
   <tr>
     <td width="20%" align="center">
-      <img src="../assets/otter.jpg" width="100%" alt="logo">
+      <img src="../../assets/otter.jpg" width="100%" alt="logo">
     </td>
     <td valign="top" align="left">
       <h1>Otter</h1>
@@ -53,35 +53,7 @@ otter run              # 默认使用 .env
 otter run --env .env.local  # 指定配置文件
 ```
 
-### 必填项
-
-```ini
-EXECUTOR__api_key=sk-xxx
-EXECUTOR__base_url=https://api.openai.com/v1
-EXECUTOR__model=gpt-4o
-```
-
-### 可选项
-
-| 环境变量 | 默认值 | 说明 |
-|---|---|---|
-| `PROPOSER_TYPE` | 无 | 提议器类型，留空禁用 |
-| `EXECUTOR_TYPE` | 无 | 执行器类型（如 `chat_llm`），留空禁用 |
-| `EVALUATOR_TYPE` | 无 | 评估器类型（如 `docker`），留空禁用 |
-| `EXECUTOR__concurrency` | `1` | 执行器并发请求数 |
-| `EXECUTOR__max_retries` | `3` | API 调用失败重试次数 |
-| `EXECUTOR__retry_base_delay` | `1.0` | 重试退避基础延迟（秒） |
-| `EXPERIMENT_ID` | `default` | 实验 ID，结果存入 `experiments/{id}/` |
-| `MAX_TURNS` | `1` | 最大反馈迭代轮次 |
-| `SAMPLES_PER_PROBLEM` | `1` | 每道题独立采样次数 |
-| `DATASET__dataset_name` | `mbppplus` | 数据集名称 |
-| `DATASET__cache_dir` | `data/cache` | 数据集缓存目录 |
-| `DOCKER__cpus` | `1.0` | 容器 CPU 限制 |
-| `DOCKER__memory` | `512m` | 容器内存限制 |
-| `DOCKER__network_mode` | `none` | 容器网络模式 |
-| `DOCKER__timeout` | `10` | 单条命令执行超时（秒） |
-| `LOG__level` | `INFO` | 日志级别 |
-| `LOG__log_file` | 无 | 日志文件路径 |
+完整的参数说明请参阅 [环境变量配置文档](env_config.md)。
 
 ## 输出结构
 
