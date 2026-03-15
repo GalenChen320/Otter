@@ -16,11 +16,11 @@ from otter.logger import get_logger
 def create_dataset() -> dataset.BaseDataset:
     settings = get_settings()
     output_dir = settings.output_dir
-    match settings.dataset.dataset_name:
+    match settings.dataset_name:
         case "evalplus": return dataset.EvalPlusDataset(output_dir)
         case "mbppplus": return dataset.MBPPPlusDataset(output_dir)
         case _:
-            raise ValueError(f"unknown dataset: {settings.dataset.dataset_name}")
+            raise ValueError(f"unknown dataset: {settings.dataset_name}")
 
 
 def create_role(
@@ -115,16 +115,16 @@ async def run(
     logger = get_logger()
 
     prop_semaphore = (
-        asyncio.Semaphore(settings.proposer.concurrency)
-        if settings.proposer is not None else None
+        asyncio.Semaphore(settings.proposer_concurrency)
+        if settings.proposer_type is not None else None
     )
     exec_semaphore = (
-        asyncio.Semaphore(settings.executor.concurrency)
-        if settings.executor is not None else None
+        asyncio.Semaphore(settings.executor_concurrency)
+        if settings.executor_type is not None else None
     )
     eval_semaphore = (
-        asyncio.Semaphore(settings.evaluator.concurrency)
-        if settings.evaluator is not None else None
+        asyncio.Semaphore(settings.evaluator_concurrency)
+        if settings.evaluator_type is not None else None
     )
 
     max_turns = settings.max_turns
