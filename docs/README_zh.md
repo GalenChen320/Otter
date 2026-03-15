@@ -91,10 +91,12 @@ EXECUTOR__model=gpt-4o
 experiments/{experiment_id}/
 └── {task_id}#{sample_id}/
     ├── turn_1/
-    │   ├── exec_input/    # 发给执行器的输入
-    │   ├── exec_output/   # 执行器产生的输出
-    │   ├── eval_input/    # 发给评估器的输入
-    │   ├── eval_output/   # 评估器产生的输出
+    │   ├── prop_input/    # 提议器输入（启用 Proposer 时创建）
+    │   ├── prop_output/   # 提议器输出（启用 Proposer 时创建）
+    │   ├── exec_input/    # 执行器输入（启用 Executor 时创建）
+    │   ├── exec_output/   # 执行器输出（启用 Executor 时创建）
+    │   ├── eval_input/    # 评估器输入（启用 Evaluator 时创建）
+    │   ├── eval_output/   # 评估器输出（启用 Evaluator 时创建）
     │   └── meta.json     # 本轮判定结果 {"passed": true/false}
     ├── turn_2/           # 第二轮（如果第一轮未通过且 max_turns > 1）
     │   └── ...
@@ -106,8 +108,8 @@ experiments/{experiment_id}/
 | 数据集 | 状态 | 说明 |
 |---|---|---|
 | [MBPP+](https://huggingface.co/datasets/evalplus/mbppplus) | 完整支持 | 函数级 Python 编程题 |
+| [EvalPlus (HumanEval+)](https://github.com/evalplus/evalplus) | 完整支持 | 严格的 LLM4Code 评测集 |
 | [LiveCodeBench](https://livecodebench.github.io/) | 计划中 | 无污染的实时编程题 |
-| [EvalPlus](https://github.com/evalplus/evalplus) | 计划中 | 严格的 LLM4Code 评测集 |
 | [SWE-Bench](https://www.swebench.com/) | 计划中 | 真实 GitHub Issue 修复 |
 | [Tau2Bench](https://github.com/sierra-research/tau2-bench) | 计划中 | 多轮智能体任务评测 |
 | [TerminalBench](https://terminalbench.com/) | 计划中 | 终端环境编程任务 |
