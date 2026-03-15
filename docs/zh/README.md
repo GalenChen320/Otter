@@ -55,6 +55,10 @@ otter run --env .env.local  # 指定配置文件
 
 完整的参数说明请参阅 [环境变量配置文档](env_config.md)。
 
+## 开发者扩展
+
+如果你想为 Otter 添加新的 Backend 或 Dataset，请参阅 [开发者扩展指南](dev_guide.md)。
+
 ## 输出结构
 
 每次运行的结果以目录结构保存在 `experiments/` 下，每道题的每轮尝试都有完整记录：
