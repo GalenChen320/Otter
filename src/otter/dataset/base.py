@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from otter.episode import EvalInputManifest, Episode, ExecInputManifest
+from otter.episode import InputManifest, Episode
 
 
 class BaseDataset(ABC):
@@ -54,8 +54,8 @@ class BaseDataset(ABC):
     # ── Pipeline 编排接口 ──
 
     @abstractmethod
-    def _prepare_exec_input(self, episode: Episode) -> ExecInputManifest:
-        """子类实现：写入输入文件，返回 ExecInputManifest。"""
+    def _prepare_exec_input(self, episode: Episode) -> InputManifest:
+        """子类实现：写入输入文件，返回 InputManifest。"""
         ...
 
     def prepare_exec_input(self, episode: Episode) -> None:
@@ -66,8 +66,8 @@ class BaseDataset(ABC):
         turn.exec_input_manifest = manifest
 
     @abstractmethod
-    def _prepare_eval_input(self, episode: Episode) -> EvalInputManifest:
-        """子类实现：从 turn.exec_output_manifest 读取响应，写入执行文件，返回 EvalInputManifest。"""
+    def _prepare_eval_input(self, episode: Episode) -> InputManifest:
+        """子类实现：从 turn.exec_output_manifest 读取响应，写入执行文件，返回 InputManifest。"""
         ...
 
     def prepare_eval_input(self, episode: Episode) -> None:

@@ -62,30 +62,11 @@ class BaseManifest:
 
 
 @dataclass
-class PropInputManifest(BaseManifest):
-    pass
-
-
-@dataclass
-class PropOutputManifest(BaseManifest):
-    pass
-
-
-@dataclass
-class ExecInputManifest(BaseManifest):
-    """Executor 输入侧的句柄。Dataset 写入，Executor 读取。"""
+class InputManifest(BaseManifest):
+    # ChatLLMBackend
     prompt_file: Path | None = None
 
-
-@dataclass
-class ExecOutputManifest(BaseManifest):
-    """Executor 输出侧的句柄。Executor 写入，Dataset 读取。"""
-    exec_output_file: Path | None = None
-
-
-@dataclass
-class EvalInputManifest(BaseManifest):
-    """执行侧的句柄。Dataset 写入，Evaluator 读取。"""
+    # DockerBackend
     image_tag: str | None = None
     script_file: Path | None = None
     commands: list[str] | None = None
@@ -93,8 +74,11 @@ class EvalInputManifest(BaseManifest):
 
 
 @dataclass
-class EvalOutputManifest(BaseManifest):
-    """评估器输出侧的句柄。Evaluator 写入，Dataset 读取。"""
+class OutputManifest(BaseManifest):
+    # ChatLLMBackend
+    exec_output_file: Path | None = None
+
+    # DockerBackend
     stdout_file: Path | None = None
     stderr_file: Path | None = None
     returncode: int | None = None
@@ -115,12 +99,12 @@ class Turn:
     exec_output_path: Path | None = None
     eval_input_path: Path | None = None
     eval_output_path: Path | None = None
-    prop_input_manifest: PropInputManifest | None = None
-    prop_output_manifest: PropOutputManifest | None = None
-    exec_input_manifest: ExecInputManifest | None = None
-    exec_output_manifest: ExecOutputManifest | None = None
-    eval_input_manifest: EvalInputManifest | None = None
-    eval_output_manifest: EvalOutputManifest | None = None
+    prop_input_manifest: InputManifest | None = None
+    prop_output_manifest: OutputManifest | None = None
+    exec_input_manifest: InputManifest | None = None
+    exec_output_manifest: OutputManifest | None = None
+    eval_input_manifest: InputManifest | None = None
+    eval_output_manifest: OutputManifest | None = None
 
     def setup_dirs(self) -> None:
         """根据 settings 按需创建子目录，并设置对应的 path 字段。"""
@@ -240,12 +224,12 @@ class Episode:
                     exec_output_path=exec_output_dir if exec_output_dir.exists() else None,
                     eval_input_path=eval_input_dir if eval_input_dir.exists() else None,
                     eval_output_path=eval_output_dir if eval_output_dir.exists() else None,
-                    prop_input_manifest=_load_manifest(prop_input_dir, PropInputManifest),
-                    prop_output_manifest=_load_manifest(prop_output_dir, PropOutputManifest),
-                    exec_input_manifest=_load_manifest(exec_input_dir, ExecInputManifest),
-                    exec_output_manifest=_load_manifest(exec_output_dir, ExecOutputManifest),
-                    eval_input_manifest=_load_manifest(eval_input_dir, EvalInputManifest),
-                    eval_output_manifest=_load_manifest(eval_output_dir, EvalOutputManifest),
+                    prop_input_manifest=_load_manifest(prop_input_dir, InputManifest),
+                    prop_output_manifest=_load_manifest(prop_output_dir, OutputManifest),
+                    exec_input_manifest=_load_manifest(exec_input_dir, InputManifest),
+                    exec_output_manifest=_load_manifest(exec_output_dir, OutputManifest),
+                    eval_input_manifest=_load_manifest(eval_input_dir, InputManifest),
+                    eval_output_manifest=_load_manifest(eval_output_dir, OutputManifest),
                 ))
 
             episodes[eid] = Episode(
