@@ -65,7 +65,9 @@ EXECUTOR__model=gpt-4o
 
 | 环境变量 | 默认值 | 说明 |
 |---|---|---|
-| `EXECUTOR__executor_type` | `chat_llm` | 执行器类型 |
+| `PROPOSER_TYPE` | 无 | 提议器类型，留空禁用 |
+| `EXECUTOR_TYPE` | 无 | 执行器类型（如 `chat_llm`），留空禁用 |
+| `EVALUATOR_TYPE` | 无 | 评估器类型（如 `docker`），留空禁用 |
 | `EXECUTOR__concurrency` | `1` | 执行器并发请求数 |
 | `EXECUTOR__max_retries` | `3` | API 调用失败重试次数 |
 | `EXECUTOR__retry_base_delay` | `1.0` | 重试退避基础延迟（秒） |

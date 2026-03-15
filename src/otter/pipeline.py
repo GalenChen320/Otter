@@ -26,33 +26,33 @@ def create_dataset() -> dataset.BaseDataset:
 
 def create_executor() -> executor.BaseExecutor | None:
     settings = get_settings()
-    if settings.executor is None:
+    if settings.executor_type is None:
         return None
-    match settings.executor.executor_type:
+    match settings.executor_type:
         case "chat_llm":
             return executor.ChatLLMExecutor()
         case _:
-            raise ValueError(f"unknown executor_type: {settings.executor.executor_type}")
+            raise ValueError(f"unknown executor_type: {settings.executor_type}")
 
 
 def create_evaluator() -> evaluator.BaseEvaluator | None:
     settings = get_settings()
-    if settings.evaluator is None:
+    if settings.evaluator_type is None:
         return None
-    match settings.evaluator.evaluator_type:
+    match settings.evaluator_type:
         case "docker":
             return evaluator.DockerEvaluator()
         case _:
-            raise ValueError(f"unknown evaluator_type: {settings.evaluator.evaluator_type}")
+            raise ValueError(f"unknown evaluator_type: {settings.evaluator_type}")
 
 
 def create_proposer() -> proposer.BaseProposer | None:
     settings = get_settings()
-    if settings.proposer is None:
+    if settings.proposer_type is None:
         return None
-    match settings.proposer.proposer_type:
+    match settings.proposer_type:
         case _:
-            raise ValueError(f"unknown proposer_type: {settings.proposer.proposer_type}")
+            raise ValueError(f"unknown proposer_type: {settings.proposer_type}")
 
 
 def get_pending_episodes(ds: dataset.BaseDataset) -> list[Episode]:
