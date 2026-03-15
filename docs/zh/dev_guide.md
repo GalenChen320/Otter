@@ -1,16 +1,14 @@
 # 开发者扩展指南
 
-本文档说明如何为 Otter 添加新的 **Backend** 或 **Dataset**。
-
 ---
 
-## 添加新 Backend
+## 1 添加新 Backend
 
 Backend 是纯能力层，接收原生类型参数、返回原生类型结果，不感知框架概念。
 
 以添加一个名为 `my_backend` 的 Backend 为例，需要修改 4 个文件：
 
-### 第一步：实现 Backend 类
+### 1.1 实现 Backend 类
 
 在 `src/otter/backend/` 下新建 `my_backend.py`：
 
@@ -31,7 +29,7 @@ class MyBackend:
 - `run` 方法是 async 的，参数和返回值都是原生类型
 - 不要在 Backend 中导入任何框架模块
 
-### 第二步：注册 Backend 配置
+### 1.2 注册 Backend 配置
 
 在 `src/otter/config/backend_settings.py` 中：
 
@@ -61,7 +59,7 @@ BACKEND_SETTINGS_REGISTRY: dict[str, type[BackendSettings]] = {
 
 注册后，框架会根据角色前缀自动从环境变量读取配置。例如当 `EXECUTOR_TYPE=my_backend` 时，会从 `EXECUTOR__config_a`、`EXECUTOR__config_b`、`EXECUTOR__config_c` 读取参数。
 
-### 第三步：注册 Backend 工厂
+### 1.3 注册 Backend 工厂
 
 在 `src/otter/backend/__init__.py` 的 `create_backend` 函数中添加一个 `case` 分支：
 
@@ -84,7 +82,7 @@ def create_backend(backend_type: str, settings):
             raise ValueError(f"Unknown backend type: {backend_type}")
 ```
 
-### 第四步：注册 extract / pack 函数
+### 1.4 注册 extract / pack 函数
 
 在 `src/otter/role.py` 中，需要为新 Backend 定义两个函数并注册到分发字典：
 
@@ -130,13 +128,13 @@ EXECUTOR__config_c=30
 
 ---
 
-## 添加新 Dataset
+## 2 添加新 Dataset
 
 Dataset 负责加载数据、构建 Manifest、判定通过与否。
 
 以添加一个名为 `my_dataset` 的 Dataset 为例，需要修改 4 个文件：
 
-### 第一步：实现 Dataset 类
+### 2.1 实现 Dataset 类
 
 在 `src/otter/dataset/` 下新建 `my_dataset.py`，继承 `BaseDataset`：
 
@@ -210,7 +208,7 @@ class MyDataset(BaseDataset):
 
 **注意**：不要直接重写 `prepare_exec_input` / `prepare_eval_input` / `make_judgement`，这些是模板方法，负责保存 manifest 和调用子类的 `_prepare_xxx` / `_judge`。
 
-### 第二步：注册 Dataset 配置
+### 2.2 注册 Dataset 配置
 
 在 `src/otter/config/dataset_settings.py` 中：
 
@@ -238,7 +236,7 @@ DATASET_SETTINGS_REGISTRY: dict[str, type[DatasetSettings]] = {
 
 注册后，框架会从 `DATASET__` 前缀读取配置。例如 `DATASET__custom_option=xxx`。
 
-### 第三步：注册 Dataset 工厂
+### 2.3 注册 Dataset 工厂
 
 在 `src/otter/pipeline.py` 的 `create_dataset` 函数中添加一个 `case` 分支：
 
@@ -256,7 +254,7 @@ def create_dataset() -> dataset.BaseDataset:
             raise ValueError(f"unknown dataset: {settings.dataset_name}")
 ```
 
-### 第四步：导出类
+### 2.4 导出类
 
 在 `src/otter/dataset/__init__.py` 中导入并导出新类：
 
