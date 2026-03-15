@@ -179,3 +179,8 @@ class DockerBackend:
 
         finally:
             await remove_container(container_name, force=True, missing_ok=True)
+
+__all__ = [
+    "DockerResult",
+    "DockerBackend",
+]

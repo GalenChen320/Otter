@@ -43,3 +43,7 @@ class ChatLLMBackend:
         raise RuntimeError(
             f"ChatLLMBackend failed after {self.max_retries} attempts"
         ) from last_exc
+
+__all__ = [
+    "ChatLLMBackend",
+]

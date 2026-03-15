@@ -159,3 +159,11 @@ class EvaluatorRole(BaseRole):
 
     def _set_output_manifest(self, episode: Episode, manifest: OutputManifest) -> None:
         episode.turns[-1].eval_output_manifest = manifest
+
+
+__all__ = [
+    "BaseRole",
+    "ProposerRole",
+    "ExecutorRole",
+    "EvaluatorRole",
+]

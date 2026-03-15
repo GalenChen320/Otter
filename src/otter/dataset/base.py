@@ -86,3 +86,8 @@ class BaseDataset(ABC):
         """判定 + 保存 meta，标记 turn 完成。"""
         await self._judge(episode)
         episode.turns[-1].save_meta()
+
+
+__all__ = [
+    "BaseDataset",
+]

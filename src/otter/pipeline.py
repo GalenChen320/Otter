@@ -213,3 +213,6 @@ async def main():
     async with ds.run_context():
         episodes = await run(ds, prop_client, exec_client, eval_client)
         logger.info("done: %d episodes processed", len(episodes))
+
+
+__all__ = ["main"]

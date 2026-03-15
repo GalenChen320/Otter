@@ -118,3 +118,7 @@ class MBPPPlusDataset(BaseDataset):
             raise ValueError("MBPPPlusDataset requires OutputManifest")
 
         turn.passed = eval_output.returncode == 0 and not eval_output.timed_out
+
+__all__ = [
+    "MBPPPlusDataset",
+]

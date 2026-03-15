@@ -241,3 +241,11 @@ class Episode:
 
         logger.info("synced %d episodes from %s", len(episodes), output_dir)
         return episodes
+
+
+__all__ = [
+    "Episode",
+    "InputManifest",
+    "OutputManifest",
+    "EXPERIMENT_META",
+]
