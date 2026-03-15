@@ -69,10 +69,9 @@ EXECUTOR__model=gpt-4o
 | `EXECUTOR__concurrency` | `1` | 执行器并发请求数 |
 | `EXECUTOR__max_retries` | `3` | API 调用失败重试次数 |
 | `EXECUTOR__retry_base_delay` | `1.0` | 重试退避基础延迟（秒） |
-| `EXPERIMENT__experiment_id` | `default` | 实验 ID，结果存入 `experiments/{id}/` |
-| `EXPERIMENT__max_turns` | `1` | 最大反馈迭代轮次 |
-| `EXPERIMENT__samples_per_problem` | `1` | 每道题独立采样次数 |
-| `EXPERIMENT__feedback_strategy` | `error_message` | 反馈策略（`minimal` / `error_message` / `progressive`） |
+| `EXPERIMENT_ID` | `default` | 实验 ID，结果存入 `experiments/{id}/` |
+| `MAX_TURNS` | `1` | 最大反馈迭代轮次 |
+| `SAMPLES_PER_PROBLEM` | `1` | 每道题独立采样次数 |
 | `DATASET__dataset_name` | `mbppplus` | 数据集名称 |
 | `DATASET__cache_dir` | `data/cache` | 数据集缓存目录 |
 | `DOCKER__cpus` | `1.0` | 容器 CPU 限制 |
