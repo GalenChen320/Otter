@@ -69,10 +69,9 @@ EXECUTOR__model=gpt-4o
 | `EXECUTOR__concurrency` | `1` | Max concurrent executor executions |
 | `EXECUTOR__max_retries` | `3` | API call retry attempts |
 | `EXECUTOR__retry_base_delay` | `1.0` | Retry backoff base delay (seconds) |
-| `EXPERIMENT__experiment_id` | `default` | Experiment ID, results saved to `experiments/{id}/` |
-| `EXPERIMENT__max_turns` | `1` | Max feedback iteration turns |
-| `EXPERIMENT__samples_per_problem` | `1` | Independent samples per problem |
-| `EXPERIMENT__feedback_strategy` | `error_message` | Feedback strategy (`minimal` / `error_message` / `progressive`) |
+| `EXPERIMENT_ID` | `default` | Experiment ID, results saved to `experiments/{id}/` |
+| `MAX_TURNS` | `1` | Max feedback iteration turns |
+| `SAMPLES_PER_PROBLEM` | `1` | Independent samples per problem |
 | `DATASET__dataset_name` | `mbppplus` | Dataset name |
 | `DATASET__cache_dir` | `data/cache` | Dataset cache directory |
 | `DOCKER__cpus` | `1.0` | Container CPU limit |

@@ -182,11 +182,10 @@ class LoggerSettings(BaseSettings):
         return _coerce_empty_str(v)
 
 
-class ExperimentSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_prefix="EXPERIMENT__", 
-        extra="ignore"
-    )
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(extra="ignore")
+
+    # ── Experiment (top-level) ──
     experiment_id: str = tracked_field(
         default="default",
         description="Unique identifier for this experiment run"
@@ -199,24 +198,14 @@ class ExperimentSettings(BaseSettings):
         default=1,
         description="Independent samples per problem"
     )
-    feedback_strategy: Literal[
-        "minimal",
-        "error_message",
-        "progressive"
-    ] = tracked_field(
-        default="error_message",
-        description="Strategy for constructing feedback prompts"
-    )
+
     @property
     def output_dir(self) -> Path:
         return ROOT_DIR / "experiments" / self.experiment_id
 
-
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(extra="ignore")
+    # ── Component settings ──
     dataset: DatasetSettings
     log: LoggerSettings
-    experiment: ExperimentSettings
     proposer: ProposerSettings | None = None
     executor: ExecutorSettings | None = None
     evaluator: EvaluatorSettings | None = None
@@ -266,7 +255,6 @@ def _build_settings(env_file: str) -> Settings:
         _env_file=env,
         dataset=DatasetSettings(_env_file=env),
         log=LoggerSettings(_env_file=env),
-        experiment=ExperimentSettings(_env_file=env),
         proposer=proposer,
         executor=executor,
         evaluator=evaluator,

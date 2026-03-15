@@ -16,7 +16,7 @@ from otter.logger import get_logger
 
 def create_dataset() -> dataset.BaseDataset:
     settings = get_settings()
-    output_dir = settings.experiment.output_dir
+    output_dir = settings.output_dir
     match settings.dataset.dataset_name:
         case "evalplus": return dataset.EvalPlusDataset(output_dir)
         case "mbppplus": return dataset.MBPPPlusDataset(output_dir)
@@ -62,17 +62,17 @@ def get_pending_episodes(ds: dataset.BaseDataset) -> list[Episode]:
     已完成的（resolved 或 exhausted）跳过，部分完成的继续。
     """
     settings = get_settings()
-    output_dir = settings.experiment.output_dir
+    output_dir = settings.output_dir
     existing = Episode.sync_all(output_dir)
     episodes: list[Episode] = []
 
     for task_id in ds.task_ids:
-        for k in range(settings.experiment.samples_per_problem):
+        for k in range(settings.samples_per_problem):
             eid = Episode.make_eid(task_id, k)
             ep_dir = output_dir / eid
             if eid in existing:
                 ep = existing[eid]
-                if ep.resolved or ep.exhausted(settings.experiment.max_turns):
+                if ep.resolved or ep.exhausted(settings.max_turns):
                     continue
                 episodes.append(ep)
             else:
@@ -147,7 +147,7 @@ async def run(
         if settings.evaluator is not None else None
     )
 
-    max_turns = settings.experiment.max_turns
+    max_turns = settings.max_turns
     episodes = get_pending_episodes(ds)
     logger.info("starting run: %d episodes to process", len(episodes))
 
@@ -223,7 +223,7 @@ async def main():
     settings = get_settings()
     logger = get_logger()
 
-    verify_or_create_experiment_meta(settings.experiment.output_dir)
+    verify_or_create_experiment_meta(settings.output_dir)
 
     ds = create_dataset()
     prop_client = create_proposer()
