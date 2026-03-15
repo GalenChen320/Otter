@@ -14,16 +14,15 @@ def create_backend(backend_type: str, settings):
                 retry_base_delay=settings.retry_base_delay,
             )
         case "docker":
-            docker = settings.docker
             return DockerBackend(
-                timeout=docker.timeout,
-                cpus=docker.cpus,
-                memory=docker.memory,
-                memory_swap=docker.memory_swap,
-                memory_reservation=docker.memory_reservation,
-                network_mode=docker.network_mode,
-                device_read_bps=docker.device_read_bps,
-                device_write_bps=docker.device_write_bps,
+                timeout=settings.timeout,
+                cpus=settings.cpus,
+                memory=settings.memory,
+                memory_swap=settings.memory_swap,
+                memory_reservation=settings.memory_reservation,
+                network_mode=settings.network_mode,
+                device_read_bps=settings.device_read_bps,
+                device_write_bps=settings.device_write_bps,
             )
         case _:
             raise ValueError(f"Unknown backend type: {backend_type}")
