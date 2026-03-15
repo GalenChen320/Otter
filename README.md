@@ -91,10 +91,12 @@ Results are saved under `experiments/` as a directory tree, with a full record f
 experiments/{experiment_id}/
 └── {task_id}#{sample_id}/
     ├── turn_1/
-    │   ├── exec_input/    #
-    │   ├── exec_output/   #
-    │   ├── eval_input/    #
-    │   ├── eval_output/   #
+    │   ├── prop_input/    # Proposer input (created if proposer enabled)
+    │   ├── prop_output/   # Proposer output (created if proposer enabled)
+    │   ├── exec_input/    # Executor input (created if executor enabled)
+    │   ├── exec_output/   # Executor output (created if executor enabled)
+    │   ├── eval_input/    # Evaluator input (created if evaluator enabled)
+    │   ├── eval_output/   # Evaluator output (created if evaluator enabled)
     │   └── meta.json     # Turn verdict {"passed": true/false}
     ├── turn_2/           # Turn 2 (if turn 1 failed and max_turns > 1)
     │   └── ...
@@ -106,8 +108,8 @@ experiments/{experiment_id}/
 | Dataset | Status | Description |
 |---|---|---|
 | [MBPP+](https://huggingface.co/datasets/evalplus/mbppplus) | Fully supported | Function-level Python problems |
+| [EvalPlus (HumanEval+)](https://github.com/evalplus/evalplus) | Fully supported | Rigorous LLM4Code benchmarks |
 | [LiveCodeBench](https://livecodebench.github.io/) | Planned | Contamination-free live coding problems |
-| [EvalPlus](https://github.com/evalplus/evalplus) | Planned | Rigorous LLM4Code benchmarks |
 | [SWE-Bench](https://www.swebench.com/) | Planned | Real-world GitHub issue resolution |
 | [Tau2Bench](https://github.com/sierra-research/tau2-bench) | Planned | Multi-turn agentic task evaluation |
 | [TerminalBench](https://terminalbench.com/) | Planned | Terminal-based coding tasks |
