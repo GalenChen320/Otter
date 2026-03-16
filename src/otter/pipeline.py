@@ -19,6 +19,7 @@ def create_dataset() -> dataset.BaseDataset:
     match settings.dataset_name:
         case "evalplus": return dataset.EvalPlusDataset(output_dir)
         case "mbppplus": return dataset.MBPPPlusDataset(output_dir)
+        case "sweci": return dataset.SWECIDataset(output_dir)
         case _:
             raise ValueError(f"unknown dataset: {settings.dataset_name}")
 

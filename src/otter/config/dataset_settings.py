@@ -28,9 +28,17 @@ class MbppplusSettings(DatasetSettings):
     )
 
 
+class SWECISettings(DatasetSettings):
+    cache_dir: Path = untracked_field(
+        default=ROOT_DIR / "data" / "cache",
+        description="Local cache directory for downloaded datasets"
+    )
+
+
 DATASET_SETTINGS_REGISTRY: dict[str, type[DatasetSettings]] = {
     "evalplus": EvalplusSettings,
     "mbppplus": MbppplusSettings,
+    "sweci": SWECISettings
 }
 
 
