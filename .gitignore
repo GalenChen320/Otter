@@ -5,3 +5,7 @@ __pycache__/
 /*.md
 !/README.md
 /experiments
+.pytest_cache/
+.venv/
+reports/
+.coverage
