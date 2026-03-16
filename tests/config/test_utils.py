@@ -1,8 +1,7 @@
 """Tests for otter.config.utils module."""
 
 import pytest
-from pathlib import Path
-from pydantic import Field
+from pydantic_core import PydanticUndefined
 
 from otter.config.utils import (
     ROOT_DIR,
@@ -46,13 +45,13 @@ class TestTrackedField:
         assert f.default == "hello"
 
     def test_tracked_field_required_when_no_default(self):
-        """When no default is given, the field should use PydanticUndefined (Ellipsis)."""
+        """When no default is given, the field should be PydanticUndefined."""
         f = tracked_field(description="required field")
-        assert f.default is ...
+        assert f.default is PydanticUndefined
 
     def test_untracked_field_required_when_no_default(self):
         f = untracked_field(description="required field")
-        assert f.default is ...
+        assert f.default is PydanticUndefined
 
     def test_tracked_field_passes_extra_kwargs(self):
         """Extra kwargs like ge, le should be forwarded to pydantic Field."""
@@ -111,3 +110,4 @@ class TestCoerceEmptyStr:
 
     def test_float_passthrough(self):
         assert coerce_empty_str(3.14) == 3.14
+

@@ -1,7 +1,6 @@
 """Tests for otter.config.backend_settings module."""
 
 import pytest
-from pathlib import Path
 
 from otter.config.backend_settings import (
     BackendSettings,
@@ -239,3 +238,83 @@ class TestChatLLMSettingsTracked:
     def test_retry_base_delay_is_tracked(self):
         extra = ChatLLMSettings.model_fields["retry_base_delay"].json_schema_extra
         assert extra["core"] is True
+
+
+class TestChatLLMSettingsValidationBoundary:
+    """Boundary and edge-case validation for ChatLLMSettings."""
+
+    def _make_env(self, tmp_path, **overrides):
+        defaults = {
+            "api_key": "sk-xxx",
+            "base_url": "https://api.example.com",
+            "model": "test",
+        }
+        defaults.update(overrides)
+        env_file = tmp_path / ".env"
+        lines = [f"T__{k}={v}\n" for k, v in defaults.items()]
+        env_file.write_text("".join(lines))
+        return env_file
+
+    def test_max_retries_negative_raises(self, tmp_path):
+        env_file = self._make_env(tmp_path, max_retries="-1")
+        with pytest.raises(Exception):
+            ChatLLMSettings(_env_file=env_file, _env_prefix="T__")
+
+    def test_max_retries_exactly_1_ok(self, tmp_path):
+        env_file = self._make_env(tmp_path, max_retries="1")
+        s = ChatLLMSettings(_env_file=env_file, _env_prefix="T__")
+        assert s.max_retries == 1
+
+    def test_max_retries_large_value(self, tmp_path):
+        env_file = self._make_env(tmp_path, max_retries="1000")
+        s = ChatLLMSettings(_env_file=env_file, _env_prefix="T__")
+        assert s.max_retries == 1000
+
+    def test_retry_base_delay_zero(self, tmp_path):
+        env_file = self._make_env(tmp_path, retry_base_delay="0")
+        s = ChatLLMSettings(_env_file=env_file, _env_prefix="T__")
+        assert s.retry_base_delay == 0.0
+
+    def test_max_retries_non_integer_raises(self, tmp_path):
+        env_file = self._make_env(tmp_path, max_retries="abc")
+        with pytest.raises(Exception):
+            ChatLLMSettings(_env_file=env_file, _env_prefix="T__")
+
+    def test_retry_base_delay_non_numeric_raises(self, tmp_path):
+        env_file = self._make_env(tmp_path, retry_base_delay="not_a_number")
+        with pytest.raises(Exception):
+            ChatLLMSettings(_env_file=env_file, _env_prefix="T__")
+
+
+class TestDockerSettingsValidationBoundary:
+    """Boundary and edge-case validation for DockerSettings."""
+
+    def test_timeout_non_integer_raises(self, tmp_path):
+        env_file = tmp_path / ".env"
+        env_file.write_text("T__timeout=abc\n")
+        with pytest.raises(Exception):
+            DockerSettings(_env_file=env_file, _env_prefix="T__")
+
+    def test_cpus_non_numeric_raises(self, tmp_path):
+        env_file = tmp_path / ".env"
+        env_file.write_text("T__cpus=not_a_float\n")
+        with pytest.raises(Exception):
+            DockerSettings(_env_file=env_file, _env_prefix="T__")
+
+    def test_cpus_zero(self, tmp_path):
+        env_file = tmp_path / ".env"
+        env_file.write_text("T__cpus=0\n")
+        s = DockerSettings(_env_file=env_file, _env_prefix="T__")
+        assert s.cpus == 0.0
+
+    def test_timeout_zero(self, tmp_path):
+        env_file = tmp_path / ".env"
+        env_file.write_text("T__timeout=0\n")
+        s = DockerSettings(_env_file=env_file, _env_prefix="T__")
+        assert s.timeout == 0
+
+    def test_timeout_large_value(self, tmp_path):
+        env_file = tmp_path / ".env"
+        env_file.write_text("T__timeout=999999\n")
+        s = DockerSettings(_env_file=env_file, _env_prefix="T__")
+        assert s.timeout == 999999
