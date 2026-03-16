@@ -102,3 +102,110 @@ class TestDockerBackendInit:
         backend = DockerBackend(timeout=10)
         assert "device_read_bps" not in backend._container_params
         assert "device_write_bps" not in backend._container_params
+
+
+class TestDockerBackendRun:
+    """Test DockerBackend.run method with mocked docker utils."""
+
+    def _make_backend(self):
+        return DockerBackend(timeout=10)
+
+    def _mock_docker_utils(self, mocker, exec_results=None):
+        """Mock all docker_utils functions used by run()."""
+        mocker.patch("otter.backend.docker.create_container", new_callable=mocker.AsyncMock)
+        mocker.patch("otter.backend.docker.start_container", new_callable=mocker.AsyncMock)
+        mocker.patch("otter.backend.docker.remove_container", new_callable=mocker.AsyncMock)
+        mocker.patch("otter.backend.docker.copy_to_container", new_callable=mocker.AsyncMock)
+        mocker.patch("otter.backend.docker.copy_from_container", new_callable=mocker.AsyncMock)
+
+        @dataclass
+        class ExecResult:
+            stdout: str
+            stderr: str
+            returncode: int
+
+        if exec_results is None:
+            exec_results = [ExecResult(stdout="ok", stderr="", returncode=0)]
+
+        mock_exec = mocker.AsyncMock(side_effect=exec_results)
+        mocker.patch("otter.backend.docker.exec_container", mock_exec)
+        return mock_exec
+
+    async def test_successful_single_command(self, mocker):
+        backend = self._make_backend()
+        self._mock_docker_utils(mocker)
+
+        result = await backend.run(image_tag="test:v1", commands=["echo hello"])
+        assert result.returncode == 0
+        assert result.stdout == "ok"
+        assert result.timed_out is False
+
+    async def test_empty_commands(self, mocker):
+        backend = self._make_backend()
+        self._mock_docker_utils(mocker)
+
+        result = await backend.run(image_tag="test:v1", commands=[])
+        assert result.returncode == 0
+        assert result.timed_out is False
+
+    async def test_command_failure_stops_execution(self, mocker):
+        @dataclass
+        class ExecResult:
+            stdout: str
+            stderr: str
+            returncode: int
+
+        backend = self._make_backend()
+        self._mock_docker_utils(mocker, exec_results=[
+            ExecResult(stdout="", stderr="error", returncode=1),
+        ])
+
+        result = await backend.run(image_tag="test:v1", commands=["bad_cmd", "never_run"])
+        assert result.returncode == 1
+        assert result.stderr == "error"
+        assert result.timed_out is False
+
+    async def test_copy_in_failure(self, mocker):
+        backend = self._make_backend()
+        self._mock_docker_utils(mocker)
+        mocker.patch(
+            "otter.backend.docker.copy_to_container",
+            new_callable=mocker.AsyncMock,
+            side_effect=Exception("copy failed"),
+        )
+
+        result = await backend.run(
+            image_tag="test:v1",
+            commands=["echo hi"],
+            copy_in=[(Path("/local/file"), "/container/dir")],
+        )
+        assert result.returncode == -1
+        assert "copy_in failed" in result.stderr
+
+    async def test_container_removed_on_success(self, mocker):
+        backend = self._make_backend()
+        self._mock_docker_utils(mocker)
+        mock_remove = mocker.patch(
+            "otter.backend.docker.remove_container",
+            new_callable=mocker.AsyncMock,
+        )
+
+        await backend.run(image_tag="test:v1", commands=["echo hi"])
+        mock_remove.assert_called_once()
+
+    async def test_container_removed_on_failure(self, mocker):
+        backend = self._make_backend()
+        self._mock_docker_utils(mocker)
+        mocker.patch(
+            "otter.backend.docker.create_container",
+            new_callable=mocker.AsyncMock,
+            side_effect=Exception("create failed"),
+        )
+        mock_remove = mocker.patch(
+            "otter.backend.docker.remove_container",
+            new_callable=mocker.AsyncMock,
+        )
+
+        result = await backend.run(image_tag="test:v1", commands=["echo hi"])
+        assert result.returncode == -1
+        mock_remove.assert_called_once()
