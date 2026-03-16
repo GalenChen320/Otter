@@ -19,6 +19,8 @@
 <div align="center">
 
 ![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![License](https://img.shields.io/badge/license-Apache%202.0-blue)
 
 </div>
 
