@@ -1,5 +1,7 @@
 """Tests for otter.backend.docker module."""
 
+import asyncio
+
 import pytest
 from pathlib import Path
 from dataclasses import dataclass
@@ -209,3 +211,16 @@ class TestDockerBackendRun:
         result = await backend.run(image_tag="test:v1", commands=["echo hi"])
         assert result.returncode == -1
         mock_remove.assert_called_once()
+
+    async def test_command_timeout(self, mocker):
+        backend = self._make_backend()
+        self._mock_docker_utils(mocker)
+        mocker.patch(
+            "otter.backend.docker.exec_container",
+            new_callable=mocker.AsyncMock,
+            side_effect=asyncio.TimeoutError(),
+        )
+
+        result = await backend.run(image_tag="test:v1", commands=["sleep 999"])
+        assert result.timed_out is True
+        assert result.returncode == -1

@@ -143,6 +143,14 @@ class TestMBPPPlusDatasetMethods:
         await dataset._judge(ep)
         assert ep.turns[-1].passed is False
 
+    async def test_judge_timed_out(self, dataset, tmp_path):
+        ep = self._make_episode(tmp_path)
+        ep.turns[-1].eval_output_manifest = OutputManifest(
+            returncode=0, timed_out=True,
+        )
+        await dataset._judge(ep)
+        assert ep.turns[-1].passed is False
+
     async def test_judge_raises_without_manifest(self, dataset, tmp_path):
         ep = self._make_episode(tmp_path)
         ep.turns[-1].eval_output_manifest = None

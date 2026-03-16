@@ -97,29 +97,20 @@ class TestBuildLogger:
             # log directory should be created
             assert log_file.parent.exists()
 
-    def test_log_file_parent_directory_created(self, tmp_path):
-        """Should create parent directories for log file."""
-        import otter.logger as mod
-
-        log_file = tmp_path / "deep" / "nested" / "dir" / "test.log"
-        mock_settings = type("S", (), {
-            "log": type("L", (), {"level": "INFO", "log_file": log_file})()
-        })()
-
-        with patch("otter.logger.get_settings", return_value=mock_settings):
-            logger = mod._build_logger()
-            assert log_file.parent.exists()
-
     def test_handlers_cleared_on_rebuild(self):
-        """Rebuilding logger should clear previous handlers."""
+        """Rebuilding logger should replace old handlers, not accumulate."""
         import otter.logger as mod
 
         with patch("otter.logger.get_settings", side_effect=RuntimeError):
             logger1 = mod._build_logger()
-            initial_handlers = len(logger1.handlers)
-            # Build again — should clear old handlers first
+            old_handlers = list(logger1.handlers)
+            assert len(old_handlers) == 1
+
             logger2 = mod._build_logger()
-            assert len(logger2.handlers) == initial_handlers
+            assert logger1 is logger2  # same "main" logger instance
+            assert len(logger2.handlers) == 1
+            # handler object should be different (old one was cleared)
+            assert logger2.handlers[0] is not old_handlers[0]
 
     def test_formatter_applied(self):
         """All handlers should have the expected format string."""

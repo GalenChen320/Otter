@@ -287,9 +287,13 @@ class TestRunTurn:
         )
 
         assert ep.total_turns == 1
-        mock_ds.prepare_exec_input.assert_called_once_with(ep)
+        # Verify call order: prepare → run → judge
+        expected_calls = [
+            mocker.call.prepare_exec_input(ep),
+            mocker.call.make_judgement(ep),
+        ]
+        mock_ds.assert_has_calls(expected_calls, any_order=False)
         mock_exec.run.assert_called_once_with(ep)
-        mock_ds.make_judgement.assert_called_once_with(ep)
 
     async def test_run_turn_no_clients(self, tmp_path, mocker):
         """run_turn with no clients should still create turn and judge."""

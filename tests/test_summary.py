@@ -172,6 +172,18 @@ class TestSummarize:
         assert result.max_turns == 1  # default
         assert len(result.samples) == 0
 
+    def test_episode_without_turns_skipped(self, tmp_path, mocker):
+        """Episode dirs that exist but have no completed turns should be excluded."""
+        mocker.patch("otter.logger.get_logger")
+        exp_dir = tmp_path / "exp"
+        exp_dir.mkdir()
+        # Create episode dir with no turn subdirs
+        ep_dir = exp_dir / "t1#0"
+        ep_dir.mkdir()
+
+        result = summarize(exp_dir)
+        assert len(result.samples) == 0
+
     def test_multiple_samples(self, tmp_path, mocker):
         mocker.patch("otter.logger.get_logger")
         exp_dir = tmp_path / "exp"
@@ -184,10 +196,10 @@ class TestSummarize:
 
 
 class TestShowSummary:
-    """Test show_summary doesn't crash with valid data."""
+    """Test show_summary output content."""
 
-    def test_show_summary_runs_without_error(self):
-        """show_summary should produce output without raising exceptions."""
+    def test_show_summary_contains_experiment_id(self, capsys):
+        """show_summary output should contain the experiment ID."""
         result = ExperimentSummary(
             experiment_id="test_exp",
             config={"model": "gpt-4"},
@@ -205,12 +217,14 @@ class TestShowSummary:
                 ),
             ],
         )
-        # Should not raise
         show_summary(result)
+        captured = capsys.readouterr().out
+        assert "test_exp" in captured
 
-    def test_show_summary_multiple_samples(self):
+    def test_show_summary_contains_pass_stats(self, capsys):
+        """show_summary should display pass/total counts."""
         result = ExperimentSummary(
-            experiment_id="test_exp",
+            experiment_id="exp",
             config=None,
             max_turns=1,
             samples=[
@@ -221,13 +235,9 @@ class TestShowSummary:
                         TurnStats(turn=1, total=5, passed=2, completed=3, pending=2),
                     ],
                 ),
-                SampleSummary(
-                    sample_id=1,
-                    episodes=[],
-                    turn_stats=[
-                        TurnStats(turn=1, total=5, passed=0, completed=5, pending=0),
-                    ],
-                ),
             ],
         )
         show_summary(result)
+        captured = capsys.readouterr().out
+        assert "2/5" in captured  # passed count
+        assert "3/5" in captured  # completed count

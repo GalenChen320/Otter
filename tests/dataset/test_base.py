@@ -125,9 +125,11 @@ class TestBaseDatasetTemplateMethods:
         turn = ep.turns[-1]
         assert turn.exec_input_manifest is not None
         assert turn.exec_input_manifest.prompt_file is not None
-        # Manifest should be saved to disk
+        # Manifest should be saved to disk with correct content
         manifest_path = turn.exec_input_path / "manifest.json"
         assert manifest_path.exists()
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        assert data["prompt_file"] == str(turn.exec_input_manifest.prompt_file)
 
     def test_prepare_eval_input_saves_manifest(self, tmp_path):
         ds = ConcreteDataset(tmp_path)
@@ -140,6 +142,9 @@ class TestBaseDatasetTemplateMethods:
         assert turn.eval_input_manifest.image_tag == "test:v1"
         manifest_path = turn.eval_input_path / "manifest.json"
         assert manifest_path.exists()
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        assert data["image_tag"] == "test:v1"
+        assert data["script_file"] == str(turn.eval_input_manifest.script_file)
 
     async def test_make_judgement_updates_passed_and_saves_meta(self, tmp_path):
         ds = ConcreteDataset(tmp_path)

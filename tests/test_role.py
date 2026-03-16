@@ -175,19 +175,19 @@ class TestDispatchRegistries:
 
     def test_extract_dispatch_has_chat_llm(self):
         from otter.backend.chat_llm import ChatLLMBackend
-        assert ChatLLMBackend in EXTRACT_DISPATCH
+        assert EXTRACT_DISPATCH[ChatLLMBackend] is extract_for_chat_llm
 
     def test_extract_dispatch_has_docker(self):
         from otter.backend.docker import DockerBackend
-        assert DockerBackend in EXTRACT_DISPATCH
+        assert EXTRACT_DISPATCH[DockerBackend] is extract_for_docker
 
     def test_pack_dispatch_has_chat_llm(self):
         from otter.backend.chat_llm import ChatLLMBackend
-        assert ChatLLMBackend in PACK_DISPATCH
+        assert PACK_DISPATCH[ChatLLMBackend] is pack_chat_llm
 
     def test_pack_dispatch_has_docker(self):
         from otter.backend.docker import DockerBackend
-        assert DockerBackend in PACK_DISPATCH
+        assert PACK_DISPATCH[DockerBackend] is pack_docker
 
 
 class TestRoleSubclasses:
@@ -312,4 +312,6 @@ class TestBaseRoleRun:
         # Verify output manifest was saved and set
         assert ep.turns[-1].exec_output_manifest is not None
         assert (exec_out / "manifest.json").exists()
-        assert (exec_out / "response.txt").exists()
+        response_file = exec_out / "response.txt"
+        assert response_file.exists()
+        assert response_file.read_text(encoding="utf-8") == "def solution(): return 42"

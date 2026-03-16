@@ -242,6 +242,13 @@ class TestTurn:
         assert (turn_dir / "exec_output").is_dir()
         assert (turn_dir / "eval_input").is_dir()
         assert (turn_dir / "eval_output").is_dir()
+        # Verify path fields are set correctly
+        assert turn.prop_input_path == turn_dir / "prop_input"
+        assert turn.prop_output_path == turn_dir / "prop_output"
+        assert turn.exec_input_path == turn_dir / "exec_input"
+        assert turn.exec_output_path == turn_dir / "exec_output"
+        assert turn.eval_input_path == turn_dir / "eval_input"
+        assert turn.eval_output_path == turn_dir / "eval_output"
 
     def test_setup_dirs_with_no_components(self, tmp_path, mocker):
         """When no components configured, only turn_dir should be created."""
@@ -277,6 +284,12 @@ class TestEpisode:
         ep = Episode(task_id="t", sample_id=0, turns=[turn])
         assert ep.resolved is True
 
+    def test_resolved_true_after_earlier_failure(self):
+        t1 = Turn(turn_dir=Path("/fake1"), passed=False)
+        t2 = Turn(turn_dir=Path("/fake2"), passed=True)
+        ep = Episode(task_id="t", sample_id=0, turns=[t1, t2])
+        assert ep.resolved is True
+
     def test_resolved_false_when_last_turn_failed(self):
         turn = Turn(turn_dir=Path("/fake"), passed=False)
         ep = Episode(task_id="t", sample_id=0, turns=[turn])
@@ -303,6 +316,10 @@ class TestEpisode:
         ep.turns.append(Turn(turn_dir=Path("/fake")))
         assert ep.exhausted(1) is True
         assert ep.exhausted(2) is False
+
+    def test_exhausted_zero_max_turns(self):
+        ep = Episode(task_id="t", sample_id=0)
+        assert ep.exhausted(0) is True
 
     def test_next_turn(self, tmp_path, mocker):
         """next_turn should create turn dir, call setup_dirs, and append."""
