@@ -1,5 +1,3 @@
-**English** | [中文](docs/zh/README.md)
-
 <table>
   <tr>
     <td width="20%" align="center">
@@ -11,6 +9,18 @@
     </td>
   </tr>
 </table>
+
+<div align="center">
+
+**English** | [中文](docs/zh/README.md)
+
+</div>
+
+<div align="center">
+
+![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)
+
+</div>
 
 ## Why Otter
 

@@ -1,5 +1,3 @@
-[English](../../README.md) | **中文**
-
 <table>
   <tr>
     <td width="20%" align="center">
@@ -11,6 +9,14 @@
     </td>
   </tr>
 </table>
+
+<div align="center">
+
+[English](../../README.md) | **中文**
+
+![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)
+
+</div>
 
 ## 为什么需要 Otter
 
