@@ -5,19 +5,19 @@ from pathlib import Path
 
 from openai import AsyncOpenAI
 
-from otter.backend.base import Result
+from otter.manifest import Result, OutputManifest, DebugInfo
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class ChatLLMRunResult:
+class ChatLLMDebugInfo(DebugInfo):
     retries: list[Result] = field(default_factory=list)
-    products: list[Path | None] = field(default_factory=list)
-    error: str = ""
 
 
 class ChatLLMBackend:
+    backend_type = "chat_llm"
+
     def __init__(
         self,
         api_key: str,
@@ -34,7 +34,7 @@ class ChatLLMBackend:
             base_url=base_url,
         )
 
-    async def run(self, messages: list[dict], output_file: Path) -> ChatLLMRunResult:
+    async def run(self, messages: list[dict], output_file: Path) -> OutputManifest:
         retries: list[Result] = []
         for attempt in range(1, self.max_retries + 1):
             try:
@@ -47,9 +47,10 @@ class ChatLLMBackend:
                 retries.append(Result(
                     stdout="", stderr="", returncode=0, timed_out=False,
                 ))
-                return ChatLLMRunResult(
+                return OutputManifest(
+                    backend_type=self.backend_type,
                     products=[output_file],
-                    retries=retries,
+                    debug_info=ChatLLMDebugInfo(retries)
                 )
             except Exception as e:
                 logger.warning(
@@ -64,13 +65,14 @@ class ChatLLMBackend:
 
         error_msg = f"ChatLLMBackend failed after {self.max_retries} attempts"
         logger.error(error_msg)
-        return ChatLLMRunResult(
-            products=[None],
-            retries=retries,
-            error=error_msg,
+        return OutputManifest(
+            backend_type=self.backend_type,
+            products=[None], 
+            debug_info=ChatLLMDebugInfo(retries)
         )
 
+
 __all__ = [
+    "ChatLLMDebugInfo"
     "ChatLLMBackend",
-    "ChatLLMRunResult",
 ]

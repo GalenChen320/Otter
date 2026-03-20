@@ -89,11 +89,11 @@ class MBPPPlusDataset(BaseDataset):
         turn = episode.turns[-1]
         exec_output_manifest = turn.exec_output_manifest
 
-        if not exec_output_manifest or not exec_output_manifest.exec_output_file:
-            raise ValueError("MBPPPlusDataset requires 'exec_output_file' in OutputManifest")
+        # TODO 实际上这里应该判断backend的类型，根据类型判断怎么取。
+        if not exec_output_manifest.products or not exec_output_manifest.products[0]:
+            raise ValueError("MBPPPlusDataset requires 'products[0]' in OutputManifest")
 
-        # 从 exec_output manifest 读取 response
-        response = exec_output_manifest.exec_output_file.read_text(encoding="utf-8")
+        response = exec_output_manifest.products[0].read_text(encoding="utf-8")
 
         # 提取代码，拼接测试，写入脚本文件
         code = extract_code(response)

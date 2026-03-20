@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from uuid import uuid4
 from pathlib import Path
 
-from otter.backend.base import Result
+from otter.manifest import Result, OutputManifest, DebugInfo
 from otter.backend.utils.docker_utils import (
     read_image_tag_from_tar,
     get_docker_storage_device,
@@ -23,15 +23,14 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class DockerRunResult:
-    copy_in: list[Result]
-    commands: list[Result]
-    copy_out: list[Result]
-    products: list[Path | None] = field(default_factory=list)
-    error: str = ""
+class DockerDebugInfo(DebugInfo):
+    copy_in: list[Result] = field(default_factory=list)
+    commands: list[Result] = field(default_factory=list)
+    copy_out: list[Result] = field(default_factory=list)
 
 
 class DockerBackend:
+    backend_type = "docker"
 
     @staticmethod
     def _parse_size(value: str) -> int:
@@ -120,8 +119,8 @@ class DockerBackend:
         copy_in: list[tuple[Path, str] | tuple[Path, str, str]] | None = None,
         copy_out: list[tuple[str, Path] | tuple[str, Path, str]] | None = None,
         timeout: int | None = None,
-    ) -> DockerRunResult:
-        """在容器中执行命令序列，返回 DockerRunResult。
+    ) -> OutputManifest:
+        """在容器中执行命令序列，返回 OutputManifest。
 
         Args:
             image_tag: 使用的镜像
@@ -132,9 +131,9 @@ class DockerBackend:
         """
         timeout = timeout or self._timeout
         container_name = f"otter-{uuid4().hex[:8]}"
-        copy_in_results: list[Result] = []
-        command_results: list[Result] = []
-        copy_out_results: list[Result] = []
+        # output = OutputManifest()
+        products = []
+        debug = DockerDebugInfo()
 
         try:
             await create_container(
@@ -149,12 +148,12 @@ class DockerBackend:
                 rename = rest[0] if rest else None
                 try:
                     await copy_to_container(container_name, src, dst, rename=rename)
-                    copy_in_results.append(
+                    debug.copy_in.append(
                         Result(stdout="", stderr="", returncode=0, timed_out=False)
                         )
                 except Exception as e:
                     logger.error("copy_in failed (%s -> %s): %s", src, dst, e)
-                    copy_in_results.append(
+                    debug.copy_in.append(
                         Result(
                             stdout="",
                             stderr=f"copy_in failed ({src} -> {dst}): {e}",
@@ -171,7 +170,7 @@ class DockerBackend:
                         exec_container(container_name, cmd, extra_params=params),
                         timeout=timeout,
                     )
-                    command_results.append(
+                    debug.commands.append(
                         Result(
                             stdout=result.stdout,
                             stderr=result.stderr,
@@ -181,7 +180,7 @@ class DockerBackend:
                     )
                 except asyncio.TimeoutError:
                     logger.warning("command timed out after %ds: %s", timeout, cmd)
-                    command_results.append(
+                    debug.commands.append(
                         Result(
                             stdout="",
                             stderr=f"Command timed out after {timeout}s: {cmd}",
@@ -199,13 +198,13 @@ class DockerBackend:
                     await copy_from_container(container_name, src, dst, rename=rename)
                     product_name = rename if rename else Path(src).name
                     products.append(dst / product_name)
-                    copy_out_results.append(
+                    debug.copy_out.append(
                         Result(stdout="", stderr="", returncode=0, timed_out=False)
                         )
                 except Exception as e:
                     logger.error("copy_out failed (%s -> %s): %s", src, dst, e)
                     products.append(None)
-                    copy_out_results.append(
+                    debug.copy_out.append(
                         Result(
                             stdout="",
                             stderr=f"copy_out failed ({src} -> {dst}): {e}",
@@ -214,26 +213,26 @@ class DockerBackend:
                         )
                     )
 
-            return DockerRunResult(
-                copy_in=copy_in_results,
-                commands=command_results,
-                copy_out=copy_out_results,
-                products=products,
+            return OutputManifest(
+                backend_type=self.backend_type,
+                products=products, 
+                debug_info=debug
             )
 
         except Exception as e:
             logger.error("container execution failed: %s", e)
-            return DockerRunResult(
-                copy_in=copy_in_results,
-                commands=command_results,
-                copy_out=copy_out_results,
-                error=str(e)
+            OutputManifest(
+                backend_type=self.backend_type,
+                products=products, 
+                debug_info=debug, 
+                unexpected=str(e)
             )
 
         finally:
             await remove_container(container_name, force=True, missing_ok=True)
 
+
 __all__ = [
-    "DockerRunResult",
+    "DockerDebugInfo",
     "DockerBackend",
 ]

@@ -55,36 +55,6 @@ def extract_for_docker(manifest: InputManifest, episode: Episode, output_dir: Pa
     return params
 
 
-# ── pack: Backend 结果 → OutputManifest（写文件 → 引用）────────────
-
-def pack_chat_llm(result: ChatLLMRunResult, output_dir: Path) -> OutputManifest:
-    """从 ChatLLMRunResult 构建 OutputManifest。"""
-    return OutputManifest(
-        exec_output_file=result.products[0] if result.products else None,
-    )
-
-
-def pack_docker(result: DockerRunResult, output_dir: Path) -> OutputManifest:
-    """从 DockerRunResult 归约出最后一条命令的结果，写入文件，返回引用。"""
-    if result.error:
-        stdout, stderr, returncode, timed_out = "", result.error, -1, False
-    elif result.commands:
-        last = result.commands[-1]
-        stdout, stderr, returncode, timed_out = last.stdout, last.stderr, last.returncode, last.timed_out
-    else:
-        stdout, stderr, returncode, timed_out = "", "", 0, False
-
-    stdout_file = output_dir / "stdout.txt"
-    stderr_file = output_dir / "stderr.txt"
-    stdout_file.write_text(stdout, encoding="utf-8")
-    stderr_file.write_text(stderr, encoding="utf-8")
-    return OutputManifest(
-        stdout_file=stdout_file,
-        stderr_file=stderr_file,
-        returncode=returncode,
-        timed_out=timed_out,
-    )
-
 
 # ── extract/pack 分发 ───────────────────────────────────────────────
 
@@ -92,12 +62,6 @@ EXTRACT_DISPATCH = {
     ChatLLMBackend: extract_for_chat_llm,
     DockerBackend: extract_for_docker,
 }
-
-PACK_DISPATCH = {
-    ChatLLMBackend: pack_chat_llm,
-    DockerBackend: pack_docker,
-}
-
 
 # ── Role 基类 ───────────────────────────────────────────────────────
 
@@ -107,7 +71,6 @@ class BaseRole(ABC):
     def __init__(self, backend):
         self.backend = backend
         self._extract = EXTRACT_DISPATCH[type(backend)]
-        self._pack = PACK_DISPATCH[type(backend)]
 
     @abstractmethod
     def _get_input_manifest(self, episode: Episode) -> InputManifest:
@@ -126,10 +89,9 @@ class BaseRole(ABC):
         output_dir = self._get_output_dir(episode)
 
         params = self._extract(input_manifest, episode, output_dir)
-        result = await self.backend.run(**params)
-
-        manifest = self._pack(result, output_dir)
+        manifest = await self.backend.run(**params)
         manifest.save(output_dir)
+        
         self._set_output_manifest(episode, manifest)
 
 
