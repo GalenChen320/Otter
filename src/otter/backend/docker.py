@@ -1,3 +1,4 @@
+import docker
 import asyncio
 import logging
 from dataclasses import dataclass
@@ -6,6 +7,7 @@ from pathlib import Path
 
 
 from otter.backend.utils.docker_utils import (
+    read_image_tag_from_tar,
     get_docker_storage_device,
     build_image,
     remove_image,
@@ -21,11 +23,19 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class DockerResult:
+class Result:
     stdout: str
     stderr: str
     returncode: int
     timed_out: bool
+
+
+@dataclass
+class DockerRunResult:
+    copy_in: list[Result]
+    commands: list[Result]
+    copy_out: list[Result]
+    error: str = ""
 
 
 class DockerBackend:
@@ -74,10 +84,35 @@ class DockerBackend:
                 self._container_params["device_write_bps"] = [{"Path": device, "Rate": self._parse_size(device_write_bps)}]
 
     @classmethod
+    def has_image(cls, image_tag: str) -> bool:
+        """检查镜像是否存在。"""
+        client = docker.from_env()
+        try:
+            client.images.get(image_tag)
+            return True
+        except docker.errors.ImageNotFound:
+            return False
+
+    @classmethod
     async def build_image(cls, image_tag: str, dockerfile: Path | str, *,
                           exist_ok: bool = True, extra_params: dict | None = None) -> None:
         """构建镜像。"""
         await build_image(image_tag, dockerfile, exist_ok=exist_ok, extra_params=extra_params)
+
+    @classmethod
+    async def load_image(cls, tar_path: Path, *, exist_ok: bool = True) -> str:
+        """从 tar 文件加载镜像，返回 image_tag。"""
+        if not tar_path.is_file():
+            raise FileNotFoundError(f"Tar file not found: {tar_path}")
+        image_tag = read_image_tag_from_tar(tar_path)
+        if cls.has_image(image_tag):
+            if exist_ok:
+                return image_tag
+            raise FileExistsError(f"Image already exists: {image_tag}")
+        client = docker.from_env()
+        with open(tar_path, "rb") as f:
+            await asyncio.to_thread(client.images.load, f)
+        return image_tag
 
     @classmethod
     async def remove_image(cls, image_tag: str, *, missing_ok: bool = True) -> None:
@@ -87,23 +122,26 @@ class DockerBackend:
     async def run(
         self,
         image_tag: str,
-        commands: list[str],
+        commands: list[str | tuple[str, dict]],
         *,
-        copy_in: list[tuple[Path, str]] | None = None,
-        copy_out: list[tuple[str, Path]] | None = None,
+        copy_in: list[tuple[Path, str] | tuple[Path, str, str]] | None = None,
+        copy_out: list[tuple[str, Path] | tuple[str, Path, str]] | None = None,
         timeout: int | None = None,
-    ) -> DockerResult:
-        """在容器中执行命令序列，返回 DockerResult。
+    ) -> DockerRunResult:
+        """在容器中执行命令序列，返回 DockerRunResult。
 
         Args:
             image_tag: 使用的镜像
             commands:  按顺序执行的命令列表
-            copy_in:   可选，复制进容器的文件列表 [(本地路径, 容器目标目录), ...]
-            copy_out:  可选，从容器复制出的文件列表 [(容器路径, 本地目标目录), ...]
+            copy_in:   可选，复制进容器的文件列表 [(本地路径, 容器目标目录, 可选重命名), ...]
+            copy_out:  可选，从容器复制出的文件列表 [(容器路径, 本地目标目录, 可选重命名), ...]
             timeout:   单条命令超时（秒），None 则使用构造时的默认值
         """
         timeout = timeout or self._timeout
         container_name = f"otter-{uuid4().hex[:8]}"
+        copy_in_results: list[Result] = []
+        command_results: list[Result] = []
+        copy_out_results: list[Result] = []
 
         try:
             await create_container(
@@ -113,74 +151,92 @@ class DockerBackend:
             await start_container(container_name)
 
             # 复制文件进容器
-            for src, dst in (copy_in or []):
+            for item in (copy_in or []):
+                src, dst, *rest = item
+                rename = rest[0] if rest else None
                 try:
-                    await copy_to_container(container_name, src, dst)
+                    await copy_to_container(container_name, src, dst, rename=rename)
+                    copy_in_results.append(
+                        Result(stdout="", stderr="", returncode=0, timed_out=False)
+                        )
                 except Exception as e:
                     logger.error("copy_in failed (%s -> %s): %s", src, dst, e)
-                    return DockerResult(
-                        stdout="",
-                        stderr=f"copy_in failed ({src} -> {dst}): {e}",
-                        returncode=-1,
-                        timed_out=False,
+                    copy_in_results.append(
+                        Result(
+                            stdout="",
+                            stderr=f"copy_in failed ({src} -> {dst}): {e}",
+                            returncode=-1,
+                            timed_out=False,
+                        )
                     )
 
             # 按顺序执行命令
-            last_result = None
-            for cmd in commands:
+            for item in commands:
+                cmd, params = (item, None) if isinstance(item, str) else item
                 try:
-                    last_result = await asyncio.wait_for(
-                        exec_container(container_name, cmd), timeout=timeout,
+                    result = await asyncio.wait_for(
+                        exec_container(container_name, cmd, extra_params=params),
+                        timeout=timeout,
+                    )
+                    command_results.append(
+                        Result(
+                            stdout=result.stdout,
+                            stderr=result.stderr,
+                            returncode=result.returncode,
+                            timed_out=False,
+                        )
                     )
                 except asyncio.TimeoutError:
                     logger.warning("command timed out after %ds: %s", timeout, cmd)
-                    return DockerResult(
-                        stdout="",
-                        stderr=f"Command timed out after {timeout}s: {cmd}",
-                        returncode=-1,
-                        timed_out=True,
-                    )
-                if last_result.returncode != 0:
-                    return DockerResult(
-                        stdout=last_result.stdout,
-                        stderr=last_result.stderr,
-                        returncode=last_result.returncode,
-                        timed_out=False,
+                    command_results.append(
+                        Result(
+                            stdout="",
+                            stderr=f"Command timed out after {timeout}s: {cmd}",
+                            returncode=-1,
+                            timed_out=True,
+                        )
                     )
 
             # 从容器复制文件出来
-            for src, dst in (copy_out or []):
+            for item in (copy_out or []):
+                src, dst, *rest = item
+                rename = rest[0] if rest else None
                 try:
-                    await copy_from_container(container_name, src, dst)
+                    await copy_from_container(container_name, src, dst, rename=rename)
+                    copy_out_results.append(
+                        Result(stdout="", stderr="", returncode=0, timed_out=False)
+                        )
                 except Exception as e:
                     logger.error("copy_out failed (%s -> %s): %s", src, dst, e)
-                    return DockerResult(
-                        stdout=last_result.stdout if last_result else "",
-                        stderr=f"copy_out failed ({src} -> {dst}): {e}",
-                        returncode=-1,
-                        timed_out=False,
+                    copy_out_results.append(
+                        Result(
+                            stdout="",
+                            stderr=f"copy_out failed ({src} -> {dst}): {e}",
+                            returncode=-1,
+                            timed_out=False,
+                        )
                     )
 
-            return DockerResult(
-                stdout=last_result.stdout if last_result else "",
-                stderr=last_result.stderr if last_result else "",
-                returncode=last_result.returncode if last_result else 0,
-                timed_out=False,
+            return DockerRunResult(
+                copy_in=copy_in_results,
+                commands=command_results,
+                copy_out=copy_out_results,
             )
 
         except Exception as e:
             logger.error("container execution failed: %s", e)
-            return DockerResult(
-                stdout="",
-                stderr=str(e),
-                returncode=-1,
-                timed_out=False,
+            return DockerRunResult(
+                copy_in=copy_in_results,
+                commands=command_results,
+                copy_out=copy_out_results,
+                error=str(e)
             )
 
         finally:
             await remove_container(container_name, force=True, missing_ok=True)
 
 __all__ = [
-    "DockerResult",
+    "Result",
+    "DockerRunResult",
     "DockerBackend",
 ]

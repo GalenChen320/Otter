@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from otter.backend.chat_llm import ChatLLMBackend
-from otter.backend.docker import DockerBackend, DockerResult
+from otter.backend.docker import DockerBackend, Result, DockerRunResult
 from otter.episode import Episode, InputManifest, OutputManifest
 
 
@@ -65,7 +65,7 @@ def pack_chat_llm(result: str, output_dir: Path) -> OutputManifest:
     )
 
 
-def pack_docker(result: DockerResult, output_dir: Path) -> OutputManifest:
+def pack_docker(result: DockerRunResult, output_dir: Path) -> OutputManifest:
     """将 Docker 执行结果写入文件，返回引用。"""
     stdout_file = output_dir / "stdout.txt"
     stderr_file = output_dir / "stderr.txt"

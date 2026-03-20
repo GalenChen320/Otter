@@ -1,5 +1,5 @@
 from otter.backend.chat_llm import ChatLLMBackend
-from otter.backend.docker import DockerBackend, DockerResult
+from otter.backend.docker import DockerBackend, Result
 
 
 def create_backend(backend_type: str, settings):
@@ -31,6 +31,6 @@ def create_backend(backend_type: str, settings):
 __all__ = [
     "ChatLLMBackend",
     "DockerBackend",
-    "DockerResult",
+    "Result",
     "create_backend",
 ]

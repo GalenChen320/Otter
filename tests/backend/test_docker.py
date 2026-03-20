@@ -6,21 +6,21 @@ import pytest
 from pathlib import Path
 from dataclasses import dataclass
 
-from otter.backend.docker import DockerBackend, DockerResult
+from otter.backend.docker import DockerBackend, Result
 
 
 class TestDockerResult:
     """Test DockerResult dataclass."""
 
     def test_fields(self):
-        r = DockerResult(stdout="out", stderr="err", returncode=0, timed_out=False)
+        r = Result(stdout="out", stderr="err", returncode=0, timed_out=False)
         assert r.stdout == "out"
         assert r.stderr == "err"
         assert r.returncode == 0
         assert r.timed_out is False
 
     def test_timed_out_result(self):
-        r = DockerResult(stdout="", stderr="timeout", returncode=-1, timed_out=True)
+        r = Result(stdout="", stderr="timeout", returncode=-1, timed_out=True)
         assert r.timed_out is True
         assert r.returncode == -1
 

@@ -1,5 +1,8 @@
 import re
 import csv
+import shutil
+import zipfile
+import subprocess
 from pathlib import Path
 from huggingface_hub import hf_hub_download, snapshot_download
 
@@ -57,9 +60,53 @@ def download_hf_folder(
     ))
 
 
+def unzip(
+        zip_file: Path, 
+        output_dir: Path,
+        ) -> None:
+    if not zip_file.is_file():
+        raise FileNotFoundError(f"File not found: {str(zip_file)}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(zip_file) as zf:
+        zf.extractall(output_dir)
+
+
+def checkout(
+        repo_dir: Path, 
+        commit_sha: str,
+        ) -> None:
+    repo_dir = repo_dir.resolve()
+    if not repo_dir.is_dir():
+        raise FileNotFoundError(f"Directory not found: {str(repo_dir)}")
+    subprocess.run([
+        "git", "-C", str(repo_dir), "checkout", "--force", "--detach", commit_sha
+        ], check=True, capture_output=True, text=True)
+
+
+def remove_pattern_files(
+        target_dir: Path, 
+        patterns: list[str], 
+        *,
+        recursive: bool = False
+        ) -> None:
+    target_dir = target_dir.resolve()
+    if not target_dir.is_dir():
+        raise FileNotFoundError(f"Directory not found: {str(target_dir)}")
+    for pattern in patterns:
+        matches = target_dir.rglob(pattern) if recursive else target_dir.glob(pattern)
+        for item in sorted(matches, key=lambda x: len(x.parts), reverse=True):
+            if item.is_file() or item.is_symlink():
+                item.unlink()
+            elif item.is_dir():
+                shutil.rmtree(item)
+
+
 __all__ = [
     "extract_code",
     "read_csv",
     "download_hf_file",
     "download_hf_folder",
+    "unzip",
+    "checkout",
+    "remove_pattern_files",
 ]

@@ -1,6 +1,7 @@
+import re
+import json
 import docker
 import platform
-import re
 import subprocess
 import tarfile
 import tempfile
@@ -81,6 +82,15 @@ def get_docker_storage_device() -> str:
     if "nvme" in partition:
         return re.sub(r"p\d+$", "", partition)
     return re.sub(r"\d+$", "", partition)
+
+
+def read_image_tag_from_tar(tar_path: Path) -> str:
+    with tarfile.open(tar_path, "r:gz") as tar:
+        manifest_file = tar.extractfile("manifest.json")
+        if not manifest_file:
+            raise FileNotFoundError(f"manifest.json not found in {tar_path}")
+        tag = json.load(manifest_file)[0]["RepoTags"][0]
+    return tag
 
 
 def sync_build_image(
@@ -383,21 +393,9 @@ def sync_copy_to_container(
         container_name: str,
         src: Path,
         dst: PurePosixPath | str,
+        *,
+        rename: str | None = None,
     ) -> None:
-    """
-    Copy a file or directory from the local filesystem into a container.
-
-    Args:
-        container_name: The name of the container to copy into.
-        src:            The local file or directory to copy.
-        dst:            The destination path inside the container.
-
-    Raises:
-        ValueError:             If the container does not exist.
-        FileNotFoundError:      If the source file or directory does not exist.
-        docker.errors.APIError: If the destination path does not exist inside the
-                                container, or if the copy operation fails.
-    """
     # Step 1: Check if the container exists
     try:
         container = _get_client().containers.get(container_name)
@@ -412,30 +410,18 @@ def sync_copy_to_container(
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir) / "archive.tar"
         with tarfile.open(tmp_path, "w") as tar:
-            tar.add(src, arcname=src.name)
+            tar.add(src, arcname=rename or src.name)
         with open(tmp_path, "rb") as f:
             container.put_archive(str(dst), f.read())
 
 
 def sync_copy_from_container(
         container_name: str,
-        src: PurePosixPath | str,
+        src: PurePosixPath,
         dst: Path,
+        *,
+        rename: str | None = None,
     ) -> None:
-    """
-    Copy a file or directory from a container to the local filesystem.
-
-    Args:
-        container_name: The name of the container to copy from.
-        src:            The file or directory path inside the container.
-        dst:            The local destination directory to copy into.
-
-    Raises:
-        ValueError:             If the container does not exist.
-        FileNotFoundError:      If the destination directory does not exist.
-        docker.errors.APIError: If the source path does not exist inside the
-                                container, or if the copy operation fails.
-    """
     # Step 1: Check if the container exists
     try:
         container = _get_client().containers.get(container_name)
@@ -454,12 +440,22 @@ def sync_copy_from_container(
             for chunk in bits:
                 f.write(chunk)
         with tarfile.open(tmp_path, "r") as tar:
+            if rename:
+                for member in tar.getmembers():
+                    slash_idx = member.name.find("/")
+                    if slash_idx == -1:
+                        # 单个文件，直接替换整个名字
+                        member.name = rename
+                    else:
+                        # 目录，替换顶层名字，保留子路径
+                        member.name = rename + member.name[slash_idx:]
             tar.extractall(dst, filter="data")
 
 
 __all__ = [
     "is_docker_running",
     "get_docker_storage_device",
+    "read_image_tag_from_tar",
     "sync_build_image",
     "sync_remove_image",
     "sync_create_container",

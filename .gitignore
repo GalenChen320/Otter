@@ -10,3 +10,4 @@ __pycache__/
 reports/
 .coverage
 .temp
+.sweci_cache

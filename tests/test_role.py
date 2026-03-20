@@ -17,7 +17,7 @@ from otter.role import (
     ExecutorRole,
     EvaluatorRole,
 )
-from otter.backend.docker import DockerResult
+from otter.backend.docker import Result
 
 
 class TestExtractForChatLLM:
@@ -133,7 +133,7 @@ class TestPackDocker:
     """Test pack_docker function."""
 
     def test_writes_stdout_stderr_files(self, tmp_path):
-        docker_result = DockerResult(
+        docker_result = Result(
             stdout="output text",
             stderr="error text",
             returncode=0,
@@ -149,7 +149,7 @@ class TestPackDocker:
         assert result.timed_out is False
 
     def test_failed_execution(self, tmp_path):
-        docker_result = DockerResult(
+        docker_result = Result(
             stdout="",
             stderr="command not found",
             returncode=127,
@@ -160,7 +160,7 @@ class TestPackDocker:
         assert result.timed_out is False
 
     def test_timed_out(self, tmp_path):
-        docker_result = DockerResult(
+        docker_result = Result(
             stdout="",
             stderr="timeout",
             returncode=-1,
