@@ -17,7 +17,7 @@ from otter.role import (
     ExecutorRole,
     EvaluatorRole,
 )
-from otter.backend.docker import Result
+from otter.backend import Result, ChatLLMRunResult, DockerRunResult
 
 
 class TestExtractForChatLLM:
@@ -31,11 +31,14 @@ class TestExtractForChatLLM:
         turn = Turn(turn_dir=tmp_path, exec_input_manifest=manifest)
         ep = Episode(task_id="t", sample_id=0, turns=[turn])
 
-        result = extract_for_chat_llm(manifest, ep)
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        result = extract_for_chat_llm(manifest, ep, output_dir)
         assert "messages" in result
         assert len(result["messages"]) == 1
         assert result["messages"][0]["role"] == "user"
         assert result["messages"][0]["content"] == "Hello, solve this problem"
+        assert result["output_file"] == output_dir / "response.txt"
 
     def test_multi_turn_builds_history(self, tmp_path):
         """Should include history from previous turns."""
@@ -64,7 +67,9 @@ class TestExtractForChatLLM:
 
         ep = Episode(task_id="t", sample_id=0, turns=[turn1, turn2])
 
-        result = extract_for_chat_llm(current_manifest, ep)
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        result = extract_for_chat_llm(current_manifest, ep, output_dir)
         messages = result["messages"]
         assert len(messages) == 3
         assert messages[0] == {"role": "user", "content": "First prompt"}
@@ -75,13 +80,13 @@ class TestExtractForChatLLM:
 class TestExtractForDocker:
     """Test extract_for_docker function."""
 
-    def test_basic_extraction(self):
+    def test_basic_extraction(self, tmp_path):
         manifest = InputManifest(
             image_tag="test:latest",
             commands=["echo hello"],
         )
         ep = Episode(task_id="t", sample_id=0)
-        result = extract_for_docker(manifest, ep)
+        result = extract_for_docker(manifest, ep, tmp_path)
         assert result["image_tag"] == "test:latest"
         assert result["commands"] == ["echo hello"]
         assert "copy_in" not in result
@@ -95,49 +100,58 @@ class TestExtractForDocker:
             commands=["python /tmp/script.py"],
         )
         ep = Episode(task_id="t", sample_id=0)
-        result = extract_for_docker(manifest, ep)
+        result = extract_for_docker(manifest, ep, tmp_path)
         assert result["copy_in"] == [(script, "/tmp")]
 
-    def test_with_timeout(self):
+    def test_with_timeout(self, tmp_path):
         manifest = InputManifest(
             image_tag="test:latest",
             commands=["sleep 100"],
             timeout=30,
         )
         ep = Episode(task_id="t", sample_id=0)
-        result = extract_for_docker(manifest, ep)
+        result = extract_for_docker(manifest, ep, tmp_path)
         assert result["timeout"] == 30
 
-    def test_none_commands_defaults_to_empty_list(self):
+    def test_none_commands_defaults_to_empty_list(self, tmp_path):
         manifest = InputManifest(image_tag="test:latest", commands=None)
         ep = Episode(task_id="t", sample_id=0)
-        result = extract_for_docker(manifest, ep)
+        result = extract_for_docker(manifest, ep, tmp_path)
         assert result["commands"] == []
 
 
 class TestPackChatLLM:
     """Test pack_chat_llm function."""
 
-    def test_writes_response_file(self, tmp_path):
-        result = pack_chat_llm("Hello world response", tmp_path)
+    def test_successful_result(self, tmp_path):
+        output_file = tmp_path / "response.txt"
+        output_file.write_text("Hello world response", encoding="utf-8")
+        run_result = ChatLLMRunResult(
+            products=[output_file],
+            retries=[Result(stdout="Hello world response", stderr="", returncode=0, timed_out=False)],
+        )
+        result = pack_chat_llm(run_result, tmp_path)
         assert isinstance(result, OutputManifest)
-        assert result.exec_output_file == tmp_path / "response.txt"
-        assert result.exec_output_file.read_text(encoding="utf-8") == "Hello world response"
+        assert result.exec_output_file == output_file
 
-    def test_empty_response(self, tmp_path):
-        result = pack_chat_llm("", tmp_path)
-        assert result.exec_output_file.read_text(encoding="utf-8") == ""
+    def test_failed_result(self, tmp_path):
+        run_result = ChatLLMRunResult(
+            products=[],
+            retries=[Result(stdout="", stderr="API error", returncode=-1, timed_out=False)],
+            error="ChatLLMBackend failed after 2 attempts",
+        )
+        result = pack_chat_llm(run_result, tmp_path)
+        assert result.exec_output_file is None
 
 
 class TestPackDocker:
     """Test pack_docker function."""
 
     def test_writes_stdout_stderr_files(self, tmp_path):
-        docker_result = Result(
-            stdout="output text",
-            stderr="error text",
-            returncode=0,
-            timed_out=False,
+        docker_result = DockerRunResult(
+            copy_in=[],
+            commands=[Result(stdout="output text", stderr="error text", returncode=0, timed_out=False)],
+            copy_out=[],
         )
         result = pack_docker(docker_result, tmp_path)
         assert isinstance(result, OutputManifest)
@@ -149,25 +163,44 @@ class TestPackDocker:
         assert result.timed_out is False
 
     def test_failed_execution(self, tmp_path):
-        docker_result = Result(
-            stdout="",
-            stderr="command not found",
-            returncode=127,
-            timed_out=False,
+        docker_result = DockerRunResult(
+            copy_in=[],
+            commands=[Result(stdout="", stderr="command not found", returncode=127, timed_out=False)],
+            copy_out=[],
         )
         result = pack_docker(docker_result, tmp_path)
         assert result.returncode == 127
         assert result.timed_out is False
 
     def test_timed_out(self, tmp_path):
-        docker_result = Result(
-            stdout="",
-            stderr="timeout",
-            returncode=-1,
-            timed_out=True,
+        docker_result = DockerRunResult(
+            copy_in=[],
+            commands=[Result(stdout="", stderr="timeout", returncode=-1, timed_out=True)],
+            copy_out=[],
         )
         result = pack_docker(docker_result, tmp_path)
         assert result.timed_out is True
+
+    def test_error_result(self, tmp_path):
+        docker_result = DockerRunResult(
+            copy_in=[],
+            commands=[],
+            copy_out=[],
+            error="container creation failed",
+        )
+        result = pack_docker(docker_result, tmp_path)
+        assert result.returncode == -1
+        assert result.stderr_file.read_text(encoding="utf-8") == "container creation failed"
+
+    def test_empty_commands(self, tmp_path):
+        docker_result = DockerRunResult(
+            copy_in=[],
+            commands=[],
+            copy_out=[],
+        )
+        result = pack_docker(docker_result, tmp_path)
+        assert result.returncode == 0
+        assert result.timed_out is False
 
 
 class TestDispatchRegistries:
@@ -272,7 +305,6 @@ class TestBaseRoleRun:
 
     async def test_executor_role_run_with_chat_llm(self, tmp_path, mocker):
         """Full run: extract → backend.run → pack → save → set manifest."""
-        from otter.backend.chat_llm import ChatLLMBackend
         import otter.role as role_mod
 
         # Setup prompt file
@@ -293,8 +325,14 @@ class TestBaseRoleRun:
         ep = Episode(task_id="t", sample_id=0, turns=[turn], base_dir=tmp_path)
 
         # Build role manually, bypassing __init__ dispatch
+        response_file = exec_out / "response.txt"
+        response_file.write_text("def solution(): return 42", encoding="utf-8")
+
         mock_backend = mocker.AsyncMock()
-        mock_backend.run.return_value = "def solution(): return 42"
+        mock_backend.run.return_value = ChatLLMRunResult(
+            products=[response_file],
+            retries=[Result(stdout="def solution(): return 42", stderr="", returncode=0, timed_out=False)],
+        )
 
         role = ExecutorRole.__new__(ExecutorRole)
         role.backend = mock_backend
@@ -308,10 +346,10 @@ class TestBaseRoleRun:
         call_kwargs = mock_backend.run.call_args[1]
         assert "messages" in call_kwargs
         assert call_kwargs["messages"][-1]["content"] == "Solve this"
+        assert call_kwargs["output_file"] == exec_out / "response.txt"
 
         # Verify output manifest was saved and set
         assert ep.turns[-1].exec_output_manifest is not None
         assert (exec_out / "manifest.json").exists()
-        response_file = exec_out / "response.txt"
         assert response_file.exists()
         assert response_file.read_text(encoding="utf-8") == "def solution(): return 42"

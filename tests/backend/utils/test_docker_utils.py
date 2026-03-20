@@ -150,6 +150,7 @@ class TestModuleExports:
         expected = {
             "is_docker_running",
             "get_docker_storage_device",
+            "read_image_tag_from_tar",
             "build_image",
             "remove_image",
             "create_container",

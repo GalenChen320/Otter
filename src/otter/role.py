@@ -12,15 +12,16 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
-from otter.backend.chat_llm import ChatLLMBackend
-from otter.backend.docker import DockerBackend, Result, DockerRunResult
+from otter.backend.base import Result
+from otter.backend.chat_llm import ChatLLMBackend, ChatLLMRunResult
+from otter.backend.docker import DockerBackend, DockerRunResult
 from otter.episode import Episode, InputManifest, OutputManifest
 
 
 
 # ── extract: InputManifest → Backend 入参（读文件 → 原生类型）──────
 
-def extract_for_chat_llm(manifest: InputManifest, episode: Episode) -> dict:
+def extract_for_chat_llm(manifest: InputManifest, episode: Episode, output_dir: Path) -> dict:
     """从 prompt_file 读取 prompt，结合历史 turns 构建 messages。"""
     messages = []
 
@@ -37,10 +38,10 @@ def extract_for_chat_llm(manifest: InputManifest, episode: Episode) -> dict:
     prompt = manifest.prompt_file.read_text(encoding="utf-8")
     messages.append({"role": "user", "content": prompt})
 
-    return {"messages": messages}
+    return {"messages": messages, "output_file": output_dir / "response.txt"}
 
 
-def extract_for_docker(manifest: InputManifest, episode: Episode) -> dict:
+def extract_for_docker(manifest: InputManifest, episode: Episode, output_dir: Path) -> dict:
     """从 InputManifest 提取 DockerBackend 入参。"""
     params: dict = {
         "image_tag": manifest.image_tag,
@@ -56,26 +57,32 @@ def extract_for_docker(manifest: InputManifest, episode: Episode) -> dict:
 
 # ── pack: Backend 结果 → OutputManifest（写文件 → 引用）────────────
 
-def pack_chat_llm(result: str, output_dir: Path) -> OutputManifest:
-    """将 LLM 响应写入文件，返回引用。"""
-    output_file = output_dir / "response.txt"
-    output_file.write_text(result, encoding="utf-8")
+def pack_chat_llm(result: ChatLLMRunResult, output_dir: Path) -> OutputManifest:
+    """从 ChatLLMRunResult 构建 OutputManifest。"""
     return OutputManifest(
-        exec_output_file=output_file
+        exec_output_file=result.products[0] if result.products else None,
     )
 
 
 def pack_docker(result: DockerRunResult, output_dir: Path) -> OutputManifest:
-    """将 Docker 执行结果写入文件，返回引用。"""
+    """从 DockerRunResult 归约出最后一条命令的结果，写入文件，返回引用。"""
+    if result.error:
+        stdout, stderr, returncode, timed_out = "", result.error, -1, False
+    elif result.commands:
+        last = result.commands[-1]
+        stdout, stderr, returncode, timed_out = last.stdout, last.stderr, last.returncode, last.timed_out
+    else:
+        stdout, stderr, returncode, timed_out = "", "", 0, False
+
     stdout_file = output_dir / "stdout.txt"
     stderr_file = output_dir / "stderr.txt"
-    stdout_file.write_text(result.stdout, encoding="utf-8")
-    stderr_file.write_text(result.stderr, encoding="utf-8")
+    stdout_file.write_text(stdout, encoding="utf-8")
+    stderr_file.write_text(stderr, encoding="utf-8")
     return OutputManifest(
         stdout_file=stdout_file,
         stderr_file=stderr_file,
-        returncode=result.returncode,
-        timed_out=result.timed_out,
+        returncode=returncode,
+        timed_out=timed_out,
     )
 
 
@@ -118,7 +125,7 @@ class BaseRole(ABC):
         input_manifest = self._get_input_manifest(episode)
         output_dir = self._get_output_dir(episode)
 
-        params = self._extract(input_manifest, episode)
+        params = self._extract(input_manifest, episode, output_dir)
         result = await self.backend.run(**params)
 
         manifest = self._pack(result, output_dir)

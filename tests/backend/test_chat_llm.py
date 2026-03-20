@@ -1,6 +1,7 @@
 """Tests for otter.backend.chat_llm module."""
 
 import pytest
+from pathlib import Path
 
 from otter.backend.chat_llm import ChatLLMBackend
 
@@ -49,7 +50,7 @@ class TestChatLLMBackendRun:
             retry_base_delay=0.01,
         )
 
-    async def test_successful_call(self, mocker):
+    async def test_successful_call(self, mocker, tmp_path):
         backend = self._make_backend(mocker)
         mock_response = mocker.MagicMock()
         mock_response.choices = [mocker.MagicMock()]
@@ -58,10 +59,18 @@ class TestChatLLMBackendRun:
             return_value=mock_response
         )
 
-        result = await backend.run(messages=[{"role": "user", "content": "Hi"}])
-        assert result == "Hello world"
+        output_file = tmp_path / "response.txt"
+        result = await backend.run(
+            messages=[{"role": "user", "content": "Hi"}],
+            output_file=output_file,
+        )
+        assert result.error == ""
+        assert result.products == [output_file]
+        assert output_file.read_text(encoding="utf-8") == "Hello world"
+        assert len(result.retries) == 1
+        assert result.retries[0].returncode == 0
 
-    async def test_retries_on_failure(self, mocker):
+    async def test_retries_on_failure(self, mocker, tmp_path):
         backend = self._make_backend(mocker)
         mock_response = mocker.MagicMock()
         mock_response.choices = [mocker.MagicMock()]
@@ -72,16 +81,31 @@ class TestChatLLMBackendRun:
         )
         mocker.patch("otter.backend.chat_llm.asyncio.sleep", new_callable=mocker.AsyncMock)
 
-        result = await backend.run(messages=[{"role": "user", "content": "Hi"}])
-        assert result == "OK"
+        output_file = tmp_path / "response.txt"
+        result = await backend.run(
+            messages=[{"role": "user", "content": "Hi"}],
+            output_file=output_file,
+        )
+        assert result.error == ""
+        assert output_file.read_text(encoding="utf-8") == "OK"
+        assert len(result.retries) == 2
+        assert result.retries[0].returncode == 1
+        assert result.retries[1].returncode == 0
         assert backend.client.chat.completions.create.call_count == 2
 
-    async def test_raises_after_max_retries(self, mocker):
+    async def test_returns_error_after_max_retries(self, mocker, tmp_path):
         backend = self._make_backend(mocker)
         backend.client.chat.completions.create = mocker.AsyncMock(
             side_effect=Exception("persistent error")
         )
         mocker.patch("otter.backend.chat_llm.asyncio.sleep", new_callable=mocker.AsyncMock)
 
-        with pytest.raises(RuntimeError, match="failed after 2 attempts"):
-            await backend.run(messages=[{"role": "user", "content": "Hi"}])
+        output_file = tmp_path / "response.txt"
+        result = await backend.run(
+            messages=[{"role": "user", "content": "Hi"}],
+            output_file=output_file,
+        )
+        assert result.error != ""
+        assert result.products == []
+        assert len(result.retries) == 2
+        assert all(r.returncode == 1 for r in result.retries)

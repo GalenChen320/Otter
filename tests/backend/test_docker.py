@@ -6,7 +6,8 @@ import pytest
 from pathlib import Path
 from dataclasses import dataclass
 
-from otter.backend.docker import DockerBackend, Result
+from otter.backend.docker import DockerBackend
+from otter.backend import Result
 
 
 class TestDockerResult:
@@ -138,17 +139,19 @@ class TestDockerBackendRun:
         self._mock_docker_utils(mocker)
 
         result = await backend.run(image_tag="test:v1", commands=["echo hello"])
-        assert result.returncode == 0
-        assert result.stdout == "ok"
-        assert result.timed_out is False
+        assert len(result.commands) == 1
+        assert result.commands[0].returncode == 0
+        assert result.commands[0].stdout == "ok"
+        assert result.commands[0].timed_out is False
+        assert result.error == ""
 
     async def test_empty_commands(self, mocker):
         backend = self._make_backend()
         self._mock_docker_utils(mocker)
 
         result = await backend.run(image_tag="test:v1", commands=[])
-        assert result.returncode == 0
-        assert result.timed_out is False
+        assert len(result.commands) == 0
+        assert result.error == ""
 
     async def test_command_failure_stops_execution(self, mocker):
         @dataclass
@@ -163,9 +166,9 @@ class TestDockerBackendRun:
         ])
 
         result = await backend.run(image_tag="test:v1", commands=["bad_cmd", "never_run"])
-        assert result.returncode == 1
-        assert result.stderr == "error"
-        assert result.timed_out is False
+        assert len(result.commands) == 1
+        assert result.commands[0].returncode == 1
+        assert result.commands[0].stderr == "error"
 
     async def test_copy_in_failure(self, mocker):
         backend = self._make_backend()
@@ -181,8 +184,9 @@ class TestDockerBackendRun:
             commands=["echo hi"],
             copy_in=[(Path("/local/file"), "/container/dir")],
         )
-        assert result.returncode == -1
-        assert "copy_in failed" in result.stderr
+        assert len(result.copy_in) == 1
+        assert result.copy_in[0].returncode == -1
+        assert "copy_in failed" in result.copy_in[0].stderr
 
     async def test_container_removed_on_success(self, mocker):
         backend = self._make_backend()
@@ -209,7 +213,7 @@ class TestDockerBackendRun:
         )
 
         result = await backend.run(image_tag="test:v1", commands=["echo hi"])
-        assert result.returncode == -1
+        assert result.error != ""
         mock_remove.assert_called_once()
 
     async def test_command_timeout(self, mocker):
@@ -222,5 +226,6 @@ class TestDockerBackendRun:
         )
 
         result = await backend.run(image_tag="test:v1", commands=["sleep 999"])
-        assert result.timed_out is True
-        assert result.returncode == -1
+        assert len(result.commands) == 1
+        assert result.commands[0].timed_out is True
+        assert result.commands[0].returncode == -1

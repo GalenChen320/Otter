@@ -1,11 +1,11 @@
 import docker
 import asyncio
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import uuid4
 from pathlib import Path
 
-
+from otter.backend.base import Result
 from otter.backend.utils.docker_utils import (
     read_image_tag_from_tar,
     get_docker_storage_device,
@@ -23,18 +23,11 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class Result:
-    stdout: str
-    stderr: str
-    returncode: int
-    timed_out: bool
-
-
-@dataclass
 class DockerRunResult:
     copy_in: list[Result]
     commands: list[Result]
     copy_out: list[Result]
+    products: list[Path | None] = field(default_factory=list)
     error: str = ""
 
 
@@ -198,16 +191,20 @@ class DockerBackend:
                     )
 
             # 从容器复制文件出来
+            products: list[Path | None] = []
             for item in (copy_out or []):
                 src, dst, *rest = item
                 rename = rest[0] if rest else None
                 try:
                     await copy_from_container(container_name, src, dst, rename=rename)
+                    product_name = rename if rename else Path(src).name
+                    products.append(dst / product_name)
                     copy_out_results.append(
                         Result(stdout="", stderr="", returncode=0, timed_out=False)
                         )
                 except Exception as e:
                     logger.error("copy_out failed (%s -> %s): %s", src, dst, e)
+                    products.append(None)
                     copy_out_results.append(
                         Result(
                             stdout="",
@@ -221,6 +218,7 @@ class DockerBackend:
                 copy_in=copy_in_results,
                 commands=command_results,
                 copy_out=copy_out_results,
+                products=products,
             )
 
         except Exception as e:
@@ -236,7 +234,6 @@ class DockerBackend:
             await remove_container(container_name, force=True, missing_ok=True)
 
 __all__ = [
-    "Result",
     "DockerRunResult",
     "DockerBackend",
 ]
