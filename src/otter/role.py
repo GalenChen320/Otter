@@ -1,22 +1,10 @@
-"""
-Role 层：将 Backend 包装成 Pipeline 可使用的角色。
-
-数据流：
-  ds.prepare_xxx → InputManifest → Role.run → OutputManifest → ds.prepare_next / ds.make_judgement
-"""
-
-from __future__ import annotations
-
-import json
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from pathlib import Path
+from abc import ABC, abstractmethod
 
-from otter.backend.base import Result
-from otter.backend.chat_llm import ChatLLMBackend, ChatLLMRunResult
-from otter.backend.docker import DockerBackend, DockerRunResult
+
+from otter.backend.chat_llm import ChatLLMBackend
+from otter.backend.docker import DockerBackend
 from otter.episode import Episode, InputManifest, OutputManifest
-
 
 
 # ── extract: InputManifest → Backend 入参（读文件 → 原生类型）──────
