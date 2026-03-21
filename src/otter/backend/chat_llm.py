@@ -5,14 +5,14 @@ from pathlib import Path
 
 from openai import AsyncOpenAI
 
-from otter.manifest import Result, OutputManifest, DebugInfo
+from otter.manifest import Result, OutputManifest, BaseDebugInfo
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class ChatLLMDebugInfo(DebugInfo):
-    retries: list[Result] = field(default_factory=list)
+class ChatLLMDebugInfo(BaseDebugInfo):
+    backend_type: str = "chat"
+    retries: list[Result] = []
 
 
 class ChatLLMBackend:

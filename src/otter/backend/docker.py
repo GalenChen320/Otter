@@ -1,11 +1,10 @@
 import docker
 import asyncio
 import logging
-from dataclasses import dataclass, field
 from uuid import uuid4
 from pathlib import Path
 
-from otter.manifest import Result, OutputManifest, DebugInfo
+from otter.manifest import Result, OutputManifest, BaseDebugInfo
 from otter.backend.utils.docker_utils import (
     read_image_tag_from_tar,
     get_docker_storage_device,
@@ -22,11 +21,11 @@ from otter.backend.utils.docker_utils import (
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class DockerDebugInfo(DebugInfo):
-    copy_in: list[Result] = field(default_factory=list)
-    commands: list[Result] = field(default_factory=list)
-    copy_out: list[Result] = field(default_factory=list)
+class DockerDebugInfo(BaseDebugInfo):
+    backend_type: str = "docker"
+    copy_in: list[Result] = []
+    commands: list[Result] = []
+    copy_out: list[Result] = []
 
 
 class DockerBackend:
