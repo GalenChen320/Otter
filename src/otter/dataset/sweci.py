@@ -132,6 +132,10 @@ async def initialize_sweci():
         async with semaphore:
             tid = task['task_id']
             task_dir = cache_dir / "processed" / tid
+            if (task_dir / ".done").exists():
+                return
+            if task_dir.exists():
+                shutil.rmtree(task_dir)
             task_dir.mkdir(parents=True, exist_ok=True)
             current_dir = task_dir / "current"
             target_dir = task_dir / "target"
@@ -178,6 +182,7 @@ async def initialize_sweci():
                 target_dir / "test_report.json",
                 task_dir
             )
+            (task_dir / ".done").touch()
 
     await asyncio.gather(*[process_task(task) for task in metadata])
 
