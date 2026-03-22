@@ -19,7 +19,7 @@ def extract_for_chat_llm(manifest: InputManifest, episode: Episode, output_dir: 
             prompt = turn.exec_input_manifest.prompt_file.read_text(encoding="utf-8")
             messages.append({"role": "user", "content": prompt})
         if turn.exec_output_manifest and turn.exec_output_manifest.exec_output_file:
-            response = turn.exec_output_manifest.exec_output_file.read_text(encoding="utf-8")
+            response = turn.exec_output_manifest.products[0].read_text(encoding="utf-8")
             messages.append({"role": "assistant", "content": response})
 
     # 当前轮次的 prompt
