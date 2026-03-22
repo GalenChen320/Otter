@@ -54,6 +54,18 @@ class BaseDataset(ABC):
     # ── Pipeline 编排接口 ──
 
     @abstractmethod
+    def _prepare_prop_input(self, episode: Episode) -> InputManifest:
+        """子类实现：写入输入文件，返回 InputManifest。"""
+        ...
+
+    def prepare_prop_input(self, episode: Episode) -> None:
+        """模板方法：调用子类 _prepare_prop_input，保存 manifest，设置 turn。"""
+        manifest = self._prepare_prop_input(episode)
+        turn = episode.turns[-1]
+        manifest.save(turn.prop_input_path)
+        turn.prop_input_manifest = manifest
+
+    @abstractmethod
     def _prepare_exec_input(self, episode: Episode) -> InputManifest:
         """子类实现：写入输入文件，返回 InputManifest。"""
         ...

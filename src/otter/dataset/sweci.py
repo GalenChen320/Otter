@@ -210,6 +210,7 @@ async def initialize_sweci():
     for tag in loaded_images:
         await DockerBackend.remove_image(tag)
     logger.info("all tasks initialized")
+    return [task['task_id'] for task in metadata]
 
 
 
@@ -219,14 +220,11 @@ class SWECIDataset(BaseDataset):
 
     async def setup(self) -> None:
         download_sweci()
-        # 跳过已经初始化的，，，不完整的要删除。
-        await initialize_sweci()
-
-        
+        self._taskids = await initialize_sweci()        
 
     @property
     def task_ids(self) -> list[str]:
-        pass
+        return self._taskids
 
     def _prepare_exec_input(self, episode: Episode) -> InputManifest:
         pass
