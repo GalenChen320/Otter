@@ -1,0 +1,84 @@
+# Dockerfile for OpenHands (https://github.com/OpenHands/OpenHands)
+# Usage:
+#   docker build \
+#     --build-arg BASE_IMAGE=ubuntu:22.04 \
+#     -t agent-openhands:latest \
+#     -f dockerfiles/Dockerfile.openhands .
+
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+ARG AGENT_HOME=/opt/agent
+
+RUN mkdir -p "${AGENT_HOME}"
+
+# ── 1. 安装基础依赖 ───────────────────────────────────────────────────────────
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y curl tmux; \
+    rm -rf /var/lib/apt/lists/*
+
+# ── 2. 安装 uv ────────────────────────────────────────────────────────────────
+RUN set -eux; \
+    curl -LsSf https://astral.sh/uv/install.sh | sh; \
+    if [ -f "$HOME/.local/bin/env" ]; then \
+        . "$HOME/.local/bin/env"; \
+    fi; \
+    ln -sf "$HOME/.local/bin/uv" /usr/local/bin/uv; \
+    uv --version
+
+# ── 3. 通过 uv 安装 Python 3.12 ──────────────────────────────────────────────
+RUN set -eux; \
+    uv python install 3.12; \
+    uv python list
+
+# ── 4. 创建 venv 并安装 openhands-ai ─────────────────────────────────────────
+RUN set -eux; \
+    OPENHANDS_VENV="/opt/openhands-venv"; \
+    uv venv "${OPENHANDS_VENV}" --python 3.12; \
+    . "${OPENHANDS_VENV}/bin/activate"; \
+    export SKIP_VSCODE_BUILD=true; \
+    uv pip install openhands-ai; \
+    uv pip install deprecated
+
+# ── 5. 注入 litellm content 格式补丁（兼容 ideaLAB 平台）────────────────────
+# 使用独立的 RUN heredoc 写入 Python 补丁文件（Docker BuildKit 语法）
+RUN SITE_PACKAGES="/opt/openhands-venv/lib/python3.12/site-packages" && \
+    cat > "${SITE_PACKAGES}/litellm_content_patch.py" <<'PATCH_EOF'
+import litellm
+
+_original_completion = litellm.completion
+
+
+def _convert_content_to_string(messages):
+    """将 messages 中的 content 数组转换为字符串，兼容 ideaLAB 平台。"""
+    for msg in messages:
+        content = msg.get('content')
+        if isinstance(content, list):
+            text_parts = []
+            for part in content:
+                if isinstance(part, dict):
+                    if 'text' in part:
+                        text_parts.append(part['text'])
+                    elif 'content' in part:
+                        text_parts.append(str(part['content']))
+                elif isinstance(part, str):
+                    text_parts.append(part)
+            msg['content'] = '\n'.join(text_parts) if text_parts else ''
+    return messages
+
+
+def _patched_completion(*args, **kwargs):
+    if 'messages' in kwargs:
+        kwargs['messages'] = _convert_content_to_string(kwargs['messages'])
+    return _original_completion(*args, **kwargs)
+
+
+litellm.completion = _patched_completion
+PATCH_EOF
+
+RUN SITE_PACKAGES="/opt/openhands-venv/lib/python3.12/site-packages" && \
+    printf '\ntry:\n    import litellm_content_patch\nexcept Exception:\n    pass\n' \
+        >> "${SITE_PACKAGES}/sitecustomize.py"
+
+WORKDIR /app
