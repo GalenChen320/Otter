@@ -51,8 +51,8 @@ class Turn:
             self.eval_input_path.mkdir(exist_ok=True)
             self.eval_output_path.mkdir(exist_ok=True)
 
-    def clean_output(self, role: str) -> None:
-        """清除指定角色的 output 目录内容和对应的 manifest，用于 retry 前清理。"""
+    def archive_output(self, role: str, suffix: str) -> None:
+        """将指定角色的 output 目录归档为带后缀的目录，然后重建空目录。"""
         match role:
             case "proposer":
                 output_dir = self.prop_output_path
@@ -66,7 +66,10 @@ class Turn:
             case _:
                 raise ValueError(f"unknown role: {role}")
         if output_dir and output_dir.exists():
-            shutil.rmtree(output_dir)
+            archive_dir = output_dir.with_name(f"{output_dir.name}.{suffix}")
+            if archive_dir.exists():
+                shutil.rmtree(archive_dir)
+            output_dir.rename(archive_dir)
             output_dir.mkdir(exist_ok=True)
 
     def save_meta(self) -> None:
@@ -103,17 +106,17 @@ class Episode:
     def exhausted(self, max_turns: int) -> bool:
         return self.total_turns >= max_turns
 
-    def clean_last_output(self) -> None:
-        """清理最后一个 turn 中最末端角色的 output。"""
+    def archive_last_output(self, suffix: str) -> None:
+        """归档最后一个 turn 中最末端角色的 output。"""
         turn = self.turns[-1]
         if turn.eval_output_manifest is not None:
-            turn.clean_output("evaluator")
+            turn.archive_output("evaluator", suffix)
         elif turn.exec_output_manifest is not None:
-            turn.clean_output("executor")
+            turn.archive_output("executor", suffix)
         elif turn.prop_output_manifest is not None:
-            turn.clean_output("proposer")
+            turn.archive_output("proposer", suffix)
         else:
-            raise RuntimeError(f"[{self.eid}] no output to clean in last turn")
+            raise RuntimeError(f"[{self.eid}] no output to archive in last turn")
 
     def next_turn(self) -> None:
         """创建下一个 Turn，建立目录结构，append 到 turns。"""
