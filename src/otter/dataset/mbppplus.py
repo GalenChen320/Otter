@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from datasets import load_dataset
+import json
 
 from otter.dataset.base import BaseDataset
-from otter.dataset.utils import extract_code
+from otter.dataset.utils import extract_code, build_messages
 from otter.config.setting import get_settings
 from otter.episode import Episode, InputManifest
 from otter.backend.docker import DockerBackend
@@ -80,10 +81,11 @@ class MBPPPlusDataset(BaseDataset):
         else:
             prompt = "Your code is incorrect. Please try again."
 
-        prompt_file = turn.exec_input_path / "prompt.txt"
-        prompt_file.write_text(prompt, encoding="utf-8")
+        messages = build_messages(episode, prompt)
+        msg_file = turn.exec_input_path / "messages.json"
+        msg_file.write_text(json.dumps(messages, ensure_ascii=False), encoding="utf-8")
 
-        return InputManifest(prompt_file=prompt_file)
+        return InputManifest(msg_file=msg_file)
 
     def _prepare_eval_input(self, episode: Episode) -> InputManifest:
         turn = episode.turns[-1]

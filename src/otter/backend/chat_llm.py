@@ -1,11 +1,11 @@
 import asyncio
+import json
 import logging
-from dataclasses import dataclass, field
 from pathlib import Path
 
 from openai import AsyncOpenAI
 
-from otter.manifest import Result, OutputManifest, ChatLLMDebugInfo
+from otter.manifest import InputManifest, Result, OutputManifest, ChatLLMDebugInfo
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,10 @@ class ChatLLMBackend:
             base_url=base_url,
         )
 
-    async def run(self, messages: list[dict], output_file: Path) -> OutputManifest:
+    async def run(self, manifest: InputManifest, output_dir: Path) -> OutputManifest:
+        messages = json.loads(manifest.msg_file.read_text(encoding="utf-8"))
+        output_file = output_dir / "response.txt"
+
         retries: list[Result] = []
         for attempt in range(1, self.max_retries + 1):
             try:

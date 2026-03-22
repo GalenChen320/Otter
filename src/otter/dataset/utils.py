@@ -7,6 +7,28 @@ from pathlib import Path
 from huggingface_hub import hf_hub_download, snapshot_download
 
 
+from otter.episode import Episode
+
+
+def build_messages(episode: Episode, current_prompt: str) -> list[dict]:
+    """构建完整的多轮 messages 列表（用于 ChatLLM 场景）。
+
+    遍历历史轮次的 exec_input/output，追加当前轮的 prompt。
+    """
+    messages = []
+    for turn in episode.turns[:-1]:
+        if turn.exec_input_manifest and turn.exec_input_manifest.messages:
+            last_user_msg = turn.exec_input_manifest.messages[-1]
+            messages.append(last_user_msg)
+        if (turn.exec_output_manifest
+                and turn.exec_output_manifest.products
+                and turn.exec_output_manifest.products[0]):
+            response = turn.exec_output_manifest.products[0].read_text(encoding="utf-8")
+            messages.append({"role": "assistant", "content": response})
+    messages.append({"role": "user", "content": current_prompt})
+    return messages
+
+
 def extract_code(response: str) -> str:
     """从 LLM response 中提取 Python 代码块。
 
@@ -102,6 +124,7 @@ def remove_pattern_files(
 
 
 __all__ = [
+    "build_messages",
     "extract_code",
     "read_csv",
     "download_hf_file",

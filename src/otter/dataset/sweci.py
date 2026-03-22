@@ -147,7 +147,7 @@ async def initialize_sweci():
             shutil.copytree(target_dir / "code" / "tests", current_dir / "code" / "tests")
             image_tag = await DockerBackend.load_image(data_dir / "image.tar.gz")
             container_report = "/tmp/test_report.json"
-            await backend.run(
+            await backend._run(
                 image_tag,
                 commands=[
                     (
@@ -158,7 +158,7 @@ async def initialize_sweci():
                 copy_in=[(current_dir/"code", "/app")],
                 copy_out=[(container_report, current_dir)],
             )
-            await backend.run(
+            await backend._run(
                 image_tag,
                 commands=[
                     (

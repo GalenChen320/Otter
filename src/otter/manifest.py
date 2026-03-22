@@ -22,7 +22,7 @@ class BaseManifest(BaseModel):
 
 class InputManifest(BaseManifest):
     # ChatLLMBackend
-    prompt_file: Path | None = None
+    msg_file: Path | None = None
 
     # DockerBackend
     image_tag: str | None = None

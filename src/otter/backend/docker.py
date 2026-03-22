@@ -103,7 +103,21 @@ class DockerBackend:
         """删除镜像。"""
         await remove_image(image_tag, missing_ok=missing_ok)
 
-    async def run(
+    async def run(self, manifest, output_dir: Path) -> OutputManifest:
+        """从 InputManifest 提取参数，执行容器命令。"""
+        commands = manifest.commands or []
+        copy_in = None
+        if manifest.script_file is not None:
+            copy_in = [(manifest.script_file, "/tmp")]
+        timeout = manifest.timeout
+        return await self._run(
+            image_tag=manifest.image_tag,
+            commands=commands,
+            copy_in=copy_in,
+            timeout=timeout,
+        )
+
+    async def _run(
         self,
         image_tag: str,
         commands: list[str | tuple[str, dict]],
