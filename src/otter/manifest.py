@@ -1,7 +1,6 @@
-import json
-from typing import Self
+from typing import Annotated, Literal, Self
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, Discriminator
 
 
 class BaseManifest(BaseModel):
@@ -32,27 +31,49 @@ class InputManifest(BaseManifest):
     timeout: int | None = None
 
 
-class BaseDebugInfo(BaseModel):
-    backend_type: str
-
-
-class OutputManifest(BaseManifest):
-    backend_type: str
-    products: list[Path | None]
-    debug_info: BaseDebugInfo | None = None
-    unexpected: str = ""
-
-    @classmethod
-    def load(cls, directory: Path) -> Self:
-        data = json.loads(
-            (directory / "manifest.json").read_text(encoding="utf-8")
-        )
-        data.pop("debug_info", None)
-        return cls.model_validate(data)
-
-
 class Result(BaseModel):
     stdout: str
     stderr: str
     returncode: int
     timed_out: bool
+
+
+class BaseDebugInfo(BaseModel):
+    backend_type: str
+
+
+class DockerDebugInfo(BaseDebugInfo):
+    backend_type: Literal["docker"] = "docker"
+    copy_in: list[Result] = []
+    commands: list[Result] = []
+    copy_out: list[Result] = []
+
+
+class ChatLLMDebugInfo(BaseDebugInfo):
+    backend_type: Literal["chat_llm"] = "chat_llm"
+    retries: list[Result] = []
+
+
+DebugInfo = Annotated[
+    DockerDebugInfo | ChatLLMDebugInfo,
+    Discriminator("backend_type"),
+]
+
+
+class OutputManifest(BaseManifest):
+    backend_type: str
+    products: list[Path | None]
+    debug_info: DebugInfo | None = None
+    unexpected: str = ""
+
+
+__all__ = [
+    "BaseManifest",
+    "InputManifest",
+    "BaseDebugInfo",
+    "DockerDebugInfo",
+    "ChatLLMDebugInfo",
+    "DebugInfo",
+    "OutputManifest",
+    "Result",
+]

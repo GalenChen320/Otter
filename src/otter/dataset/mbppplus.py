@@ -112,12 +112,8 @@ class MBPPPlusDataset(BaseDataset):
 
     async def _judge(self, episode: Episode) -> None:
         turn = episode.turns[-1]
-        eval_output = turn.eval_output_manifest
-
-        if not eval_output:
-            raise ValueError("MBPPPlusDataset requires OutputManifest")
-
-        turn.passed = eval_output.returncode == 0 and not eval_output.timed_out
+        eval_result = turn.eval_output_manifest.debug_info.commands[0]
+        turn.passed = eval_result.returncode == 0 and not eval_result.timed_out
 
 __all__ = [
     "MBPPPlusDataset",

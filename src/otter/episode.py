@@ -5,7 +5,7 @@ import json
 import shutil
 
 from otter.config.setting import get_settings
-
+from otter.manifest import InputManifest, OutputManifest
 
 
 META_FILENAME = "meta.json"

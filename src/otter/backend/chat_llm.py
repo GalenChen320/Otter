@@ -5,14 +5,9 @@ from pathlib import Path
 
 from openai import AsyncOpenAI
 
-from otter.manifest import Result, OutputManifest, BaseDebugInfo
+from otter.manifest import Result, OutputManifest, ChatLLMDebugInfo
 
 logger = logging.getLogger(__name__)
-
-
-class ChatLLMDebugInfo(BaseDebugInfo):
-    backend_type: str = "chat"
-    retries: list[Result] = []
 
 
 class ChatLLMBackend:
@@ -50,7 +45,7 @@ class ChatLLMBackend:
                 return OutputManifest(
                     backend_type=self.backend_type,
                     products=[output_file],
-                    debug_info=ChatLLMDebugInfo(retries)
+                    debug_info=ChatLLMDebugInfo(retries=retries)
                 )
             except Exception as e:
                 logger.warning(
@@ -68,11 +63,10 @@ class ChatLLMBackend:
         return OutputManifest(
             backend_type=self.backend_type,
             products=[None], 
-            debug_info=ChatLLMDebugInfo(retries)
+            debug_info=ChatLLMDebugInfo(retries=retries)
         )
 
 
 __all__ = [
-    "ChatLLMDebugInfo"
     "ChatLLMBackend",
 ]

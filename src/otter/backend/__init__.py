@@ -1,5 +1,6 @@
-from otter.backend.chat_llm import ChatLLMDebugInfo, ChatLLMBackend
-from otter.backend.docker import DockerDebugInfo, DockerBackend
+from otter.manifest import DockerDebugInfo, ChatLLMDebugInfo
+from otter.backend.chat_llm import ChatLLMBackend
+from otter.backend.docker import DockerBackend
 
 
 def create_backend(backend_type: str, settings):

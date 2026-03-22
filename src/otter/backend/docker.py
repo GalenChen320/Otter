@@ -4,7 +4,7 @@ import logging
 from uuid import uuid4
 from pathlib import Path
 
-from otter.manifest import Result, OutputManifest, BaseDebugInfo
+from otter.manifest import Result, OutputManifest, DockerDebugInfo
 from otter.backend.utils.docker_utils import (
     read_image_tag_from_tar,
     get_docker_storage_device,
@@ -19,13 +19,6 @@ from otter.backend.utils.docker_utils import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-class DockerDebugInfo(BaseDebugInfo):
-    backend_type: str = "docker"
-    copy_in: list[Result] = []
-    commands: list[Result] = []
-    copy_out: list[Result] = []
 
 
 class DockerBackend:
@@ -232,6 +225,5 @@ class DockerBackend:
 
 
 __all__ = [
-    "DockerDebugInfo",
     "DockerBackend",
 ]
