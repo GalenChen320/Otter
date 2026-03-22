@@ -1,8 +1,7 @@
-from dataclasses import dataclass, fields, field
-from pathlib import Path
-from typing import get_type_hints, get_args
 import json
 import shutil
+from pathlib import Path
+from dataclasses import dataclass, field
 
 from otter.config.setting import get_settings
 from otter.manifest import InputManifest, OutputManifest
@@ -106,7 +105,7 @@ class Episode:
         def _load_manifest(directory: Path, manifest_cls):
             mf = directory / "manifest.json"
             if mf.exists():
-                return manifest_cls.from_dict(json.loads(mf.read_text(encoding="utf-8")))
+                return manifest_cls.load(directory)
             return None
 
         for ep_dir in sorted(output_dir.iterdir()):
