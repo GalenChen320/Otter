@@ -11,8 +11,6 @@ def create_backend(backend_type: str, settings):
                 api_key=settings.api_key,
                 base_url=settings.base_url,
                 model=settings.model,
-                max_retries=settings.max_retries,
-                retry_base_delay=settings.retry_base_delay,
             )
         case "docker":
             return DockerBackend(

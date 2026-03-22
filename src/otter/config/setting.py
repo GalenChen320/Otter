@@ -86,15 +86,15 @@ class Settings(BaseSettings):
 
     # ── Component retry ──
     proposer_retry: int = untracked_field(
-        default=1,
+        default=1, ge=1,
         description="Max retry attempts for proposer"
     )
     executor_retry: int = untracked_field(
-        default=1,
+        default=1, ge=1,
         description="Max retry attempts for executor"
     )
     evaluator_retry: int = untracked_field(
-        default=1,
+        default=1, ge=1,
         description="Max retry attempts for evaluator"
     )
 

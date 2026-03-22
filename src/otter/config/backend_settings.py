@@ -69,14 +69,6 @@ class ChatLLMSettings(BackendSettings):
     model: str = tracked_field(
         description="Model name to use for generation"
     )
-    max_retries: int = tracked_field(
-        default=3, ge=1,
-        description="Max retries on API failure"
-    )
-    retry_base_delay: float = tracked_field(
-        default=1.0,
-        description="Base delay in seconds for exponential backoff"
-    )
 
 
 BACKEND_SETTINGS_REGISTRY: dict[str, type[BackendSettings]] = {

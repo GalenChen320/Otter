@@ -51,7 +51,7 @@ class DockerDebugInfo(BaseDebugInfo):
 
 class ChatLLMDebugInfo(BaseDebugInfo):
     backend_type: Literal["chat_llm"] = "chat_llm"
-    retries: list[Result] = []
+    result: Result = Result()
 
 
 DebugInfo = Annotated[
