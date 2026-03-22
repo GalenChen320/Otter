@@ -1,5 +1,6 @@
 import re
 import csv
+import json
 import shutil
 import zipfile
 import subprocess
@@ -17,8 +18,11 @@ def build_messages(episode: Episode, current_prompt: str) -> list[dict]:
     """
     messages = []
     for turn in episode.turns[:-1]:
-        if turn.exec_input_manifest and turn.exec_input_manifest.messages:
-            last_user_msg = turn.exec_input_manifest.messages[-1]
+        if turn.exec_input_manifest and turn.exec_input_manifest.msg_file:
+            hist_messages = json.loads(
+                turn.exec_input_manifest.msg_file.read_text(encoding="utf-8")
+            )
+            last_user_msg = hist_messages[-1]
             messages.append(last_user_msg)
         if (turn.exec_output_manifest
                 and turn.exec_output_manifest.products
