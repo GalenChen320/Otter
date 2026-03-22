@@ -29,6 +29,10 @@ class MbppplusSettings(DatasetSettings):
 
 
 class SWECISettings(DatasetSettings):
+    splitting: str = tracked_field(
+        default="default",
+        description="Splitting of the SWE-CI dataset"
+    )
     cache_dir: Path = untracked_field(
         default=ROOT_DIR / "data" / "cache",
         description="Local cache directory for downloaded datasets"

@@ -3,10 +3,9 @@ import shutil
 import asyncio
 import hashlib
 from pathlib import Path
-from dataclasses import dataclass
-from datasets import load_dataset
+from huggingface_hub import HfApi
 from huggingface_hub.utils import disable_progress_bars
-from huggingface_hub import HfApi, hf_hub_download, snapshot_download
+
 
 from otter.logger import get_logger
 from otter.dataset.base import BaseDataset
@@ -17,7 +16,6 @@ from otter.dataset.utils import (
     read_csv, download_hf_file, download_hf_folder,
     unzip, checkout, remove_pattern_files
 )
-
 
 def safe_name(node_id: str) -> str:
     safe_name = "".join(c if c.isalnum() or c == '.' else '_' for c in node_id)
@@ -72,8 +70,10 @@ def generate_nonpassed_dir(
 
 def download_sweci() -> None:
     settings = get_settings()
+    logger = get_logger()
     splitting = settings.dataset.splitting
     cache_dir = settings.dataset.cache_dir
+    logger.info("downloading sweci dataset (splitting=%s)", splitting)
 
     # Validate splitting
     hf_repo_id = "skylenage/SWE-CI"
@@ -119,23 +119,39 @@ def download_sweci() -> None:
 
 async def initialize_sweci():
     settings = get_settings()
+    logger = get_logger()
     assert settings.evaluator_type == "docker", "..."
     splitting = settings.dataset.splitting
     cache_dir = Path(settings.dataset.cache_dir)
     metadata_path = cache_dir / "metadata" / f"{splitting}.csv"
     metadata = read_csv(metadata_path)
 
-    backend = DockerBackend(timeout=3600) # 这里要传入一些东西，另外.sweci_cache要作为参数
-    semaphore = asyncio.Semaphore(4)
+    logger.info("initializing %d tasks", len(metadata))
+
+    backend = DockerBackend(
+        timeout=settings.evaluator.timeout,
+        cpus=settings.evaluator.cpus,
+        memory=settings.evaluator.memory,
+        memory_swap=settings.evaluator.memory_swap,
+        memory_reservation=settings.evaluator.memory_reservation,
+        network_mode=settings.evaluator.network_mode,
+        device_read_bps=settings.evaluator.device_read_bps,
+        device_write_bps=settings.evaluator.device_write_bps,
+    )
+    semaphore = asyncio.Semaphore(settings.evaluator_concurrency)
+    loaded_images: set[str] = set()
 
     async def process_task(task):
         async with semaphore:
             tid = task['task_id']
             task_dir = cache_dir / "processed" / tid
             if (task_dir / ".done").exists():
+                logger.debug("skipping %s (already done)", tid)
                 return
             if task_dir.exists():
+                logger.warning("cleaning up incomplete %s", tid)
                 shutil.rmtree(task_dir)
+            logger.info("initializing %s", tid)
             task_dir.mkdir(parents=True, exist_ok=True)
             current_dir = task_dir / "current"
             target_dir = task_dir / "target"
@@ -150,6 +166,7 @@ async def initialize_sweci():
             remove_pattern_files(target_dir / "code", [".git*", "test"])
             shutil.copytree(target_dir / "code" / "tests", current_dir / "code" / "tests")
             image_tag = await DockerBackend.load_image(data_dir / "image.tar.gz")
+            loaded_images.add(image_tag)
             container_report = "/tmp/test_report.json"
             await backend._run(
                 image_tag,
@@ -173,7 +190,6 @@ async def initialize_sweci():
                 copy_in=[(target_dir/"code", "/app")],
                 copy_out=[(container_report, target_dir)],
             )
-            await DockerBackend.remove_image(image_tag)
             current_report = current_dir / "test_report.json"
             target_report = target_dir / "test_report.json"
             assert current_report.is_file() and target_report.is_file(), "..."
@@ -183,8 +199,13 @@ async def initialize_sweci():
                 task_dir
             )
             (task_dir / ".done").touch()
+            logger.info("initialized %s", tid)
 
     await asyncio.gather(*[process_task(task) for task in metadata])
+
+    for tag in loaded_images:
+        await DockerBackend.remove_image(tag)
+    logger.info("all tasks initialized")
 
 
 
