@@ -105,15 +105,16 @@ def download_sweci() -> None:
     
     # Download tasks
     total = len(task_ids)
+    logger.info("downloading %d tasks", total)
     for idx, task_id in enumerate(task_ids):
-        print(f"({idx+1}/{total}) Preparing {task_id}...", end="    ", flush=True)
+        logger.info("(%d/%d) downloading %s", idx + 1, total, task_id)
         download_hf_folder(
             repo_id=hf_repo_id,
             remote_folder_path=f"data/{task_id}",
             local_root_dir=cache_dir,
             hf_token=None
         )
-        print("Done.", flush=True)
+    logger.info("all tasks downloaded")
 
 
 
@@ -140,16 +141,18 @@ async def initialize_sweci():
     )
     semaphore = asyncio.Semaphore(settings.evaluator_concurrency)
     loaded_images: set[str] = set()
+    total, completed = len(metadata), 0
 
     async def process_task(task):
+        nonlocal completed
         async with semaphore:
             tid = task['task_id']
             task_dir = cache_dir / "processed" / tid
             if (task_dir / ".done").exists():
-                logger.debug("skipping %s (already done)", tid)
+                completed += 1
+                logger.info("(%d/%d) skipping %s (already done)", completed, total, tid)
                 return
             if task_dir.exists():
-                logger.warning("cleaning up incomplete %s", tid)
                 shutil.rmtree(task_dir)
             logger.info("initializing %s", tid)
             task_dir.mkdir(parents=True, exist_ok=True)
@@ -168,7 +171,7 @@ async def initialize_sweci():
             image_tag = await DockerBackend.load_image(data_dir / "image.tar.gz")
             loaded_images.add(image_tag)
             container_report = "/tmp/test_report.json"
-            await backend._run(
+            current_result = await backend._run(
                 image_tag,
                 commands=[
                     (
@@ -179,7 +182,7 @@ async def initialize_sweci():
                 copy_in=[(current_dir/"code", "/app")],
                 copy_out=[(container_report, current_dir)],
             )
-            await backend._run(
+            target_result = await backend._run(
                 image_tag,
                 commands=[
                     (
@@ -199,7 +202,8 @@ async def initialize_sweci():
                 task_dir
             )
             (task_dir / ".done").touch()
-            logger.info("initialized %s", tid)
+            completed += 1
+            logger.info("(%d/%d) initialized %s", completed, total, tid)
 
     await asyncio.gather(*[process_task(task) for task in metadata])
 

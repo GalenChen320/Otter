@@ -21,15 +21,15 @@ class DockerSettings(BackendSettings):
         description="CPU cores allocated per container"
     )
     memory: str | None = tracked_field(
-        default="512m",
+        default="4096m",
         description="Memory limit per container"
     )
     memory_swap: str | None = tracked_field(
-        default="512m",
+        default="4096m",
         description="Swap limit per container"
     )
     memory_reservation: str | None = tracked_field(
-        default="256m",
+        default="2048m",
         description="Soft memory limit per container"
     )
     network_mode: str | None = tracked_field(
