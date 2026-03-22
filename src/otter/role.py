@@ -24,7 +24,7 @@ class BaseRole(ABC):
     def _set_output_manifest(self, episode: Episode, manifest: OutputManifest) -> None:
         """将 OutputManifest 赋值给 Turn 的对应字段。"""
 
-    async def run(self, episode: Episode) -> None:
+    async def run(self, episode: Episode) -> OutputManifest:
         input_manifest = self._get_input_manifest(episode)
         output_dir = self._get_output_dir(episode)
 
@@ -32,6 +32,7 @@ class BaseRole(ABC):
         manifest.save(output_dir)
 
         self._set_output_manifest(episode, manifest)
+        return manifest
 
 
 # ── 三个子类 ─────────────────────────────────────────────────────────

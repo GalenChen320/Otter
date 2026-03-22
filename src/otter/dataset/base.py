@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from otter.episode import InputManifest, Episode
+from otter.episode import InputManifest, OutputManifest, Episode
 
 
 class BaseDataset(ABC):
@@ -98,6 +98,20 @@ class BaseDataset(ABC):
         """判定 + 保存 meta，标记 turn 完成。"""
         await self._judge(episode)
         episode.turns[-1].save_meta()
+
+    # ── Retry 验收接口 ──
+
+    def validate_prop_output(self, episode: Episode, manifest: OutputManifest) -> bool:
+        """验收 Proposer 输出，返回 True 表示通过。"""
+        return True
+
+    def validate_exec_output(self, episode: Episode, manifest: OutputManifest) -> bool:
+        """验收 Executor 输出，返回 True 表示通过。"""
+        return True
+
+    def validate_eval_output(self, episode: Episode, manifest: OutputManifest) -> bool:
+        """验收 Evaluator 输出，返回 True 表示通过。"""
+        return True
 
 
 __all__ = [

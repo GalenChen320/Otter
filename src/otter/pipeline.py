@@ -74,6 +74,7 @@ async def run_turn(
 ) -> None:
     """执行单轮：创建 Turn → [propose] → [generate] → [execute] → judge。"""
     logger = get_logger()
+    settings = get_settings()
 
     # Step 1: make new turn
     ep.next_turn()
@@ -82,23 +83,47 @@ async def run_turn(
     # Step 2: Proposer run (optional)
     if prop_client is not None:
         ds.prepare_prop_input(ep)
-        async with prop_semaphore:
-            logger.info("[%s] turn %d proposing...", ep.eid, ep.total_turns)
-            await prop_client.run(ep)
+        for attempt in range(1, settings.proposer_retry + 1):
+            async with prop_semaphore:
+                logger.info("[%s] turn %d proposing (attempt %d/%d)...",
+                            ep.eid, ep.total_turns, attempt, settings.proposer_retry)
+                manifest = await prop_client.run(ep)
+            if ds.validate_prop_output(ep, manifest):
+                break
+            logger.warning("[%s] turn %d proposer output rejected (attempt %d/%d)",
+                           ep.eid, ep.total_turns, attempt, settings.proposer_retry)
+        else:
+            raise RuntimeError(f"[{ep.eid}] proposer failed after {settings.proposer_retry} attempts")
 
     # Step 3: Executor run (optional)
     if exec_client is not None:
         ds.prepare_exec_input(ep)
-        async with exec_semaphore:
-            logger.info("[%s] turn %d executing...", ep.eid, ep.total_turns)
-            await exec_client.run(ep)
+        for attempt in range(1, settings.executor_retry + 1):
+            async with exec_semaphore:
+                logger.info("[%s] turn %d executing (attempt %d/%d)...",
+                            ep.eid, ep.total_turns, attempt, settings.executor_retry)
+                manifest = await exec_client.run(ep)
+            if ds.validate_exec_output(ep, manifest):
+                break
+            logger.warning("[%s] turn %d executor output rejected (attempt %d/%d)",
+                           ep.eid, ep.total_turns, attempt, settings.executor_retry)
+        else:
+            raise RuntimeError(f"[{ep.eid}] executor failed after {settings.executor_retry} attempts")
 
     # Step 4: Evaluator run (optional)
     if eval_client is not None:
         ds.prepare_eval_input(ep)
-        async with eval_semaphore:
-            logger.info("[%s] turn %d evaluating...", ep.eid, ep.total_turns)
-            await eval_client.run(ep)
+        for attempt in range(1, settings.evaluator_retry + 1):
+            async with eval_semaphore:
+                logger.info("[%s] turn %d evaluating (attempt %d/%d)...",
+                            ep.eid, ep.total_turns, attempt, settings.evaluator_retry)
+                manifest = await eval_client.run(ep)
+            if ds.validate_eval_output(ep, manifest):
+                break
+            logger.warning("[%s] turn %d evaluator output rejected (attempt %d/%d)",
+                           ep.eid, ep.total_turns, attempt, settings.evaluator_retry)
+        else:
+            raise RuntimeError(f"[{ep.eid}] evaluator failed after {settings.evaluator_retry} attempts")
 
     # Step 5: make judgement
     await ds.make_judgement(ep)

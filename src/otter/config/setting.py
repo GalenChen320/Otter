@@ -84,6 +84,20 @@ class Settings(BaseSettings):
         description="Max concurrent evaluator executions"
     )
 
+    # ── Component retry ──
+    proposer_retry: int = untracked_field(
+        default=1,
+        description="Max retry attempts for proposer"
+    )
+    executor_retry: int = untracked_field(
+        default=1,
+        description="Max retry attempts for executor"
+    )
+    evaluator_retry: int = untracked_field(
+        default=1,
+        description="Max retry attempts for evaluator"
+    )
+
     @field_validator("proposer_type", "executor_type", "evaluator_type", mode="before")
     @classmethod
     def _empty_str_to_none(cls, v: Any) -> Any:
