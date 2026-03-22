@@ -51,6 +51,24 @@ class Turn:
             self.eval_input_path.mkdir(exist_ok=True)
             self.eval_output_path.mkdir(exist_ok=True)
 
+    def clean_output(self, role: str) -> None:
+        """清除指定角色的 output 目录内容和对应的 manifest，用于 retry 前清理。"""
+        match role:
+            case "proposer":
+                output_dir = self.prop_output_path
+                self.prop_output_manifest = None
+            case "executor":
+                output_dir = self.exec_output_path
+                self.exec_output_manifest = None
+            case "evaluator":
+                output_dir = self.eval_output_path
+                self.eval_output_manifest = None
+            case _:
+                raise ValueError(f"unknown role: {role}")
+        if output_dir and output_dir.exists():
+            shutil.rmtree(output_dir)
+            output_dir.mkdir(exist_ok=True)
+
     def save_meta(self) -> None:
         """写入 meta.json，标记 turn 完成。"""
         meta = {"passed": self.passed}
@@ -84,6 +102,18 @@ class Episode:
 
     def exhausted(self, max_turns: int) -> bool:
         return self.total_turns >= max_turns
+
+    def clean_last_output(self) -> None:
+        """清理最后一个 turn 中最末端角色的 output。"""
+        turn = self.turns[-1]
+        if turn.eval_output_manifest is not None:
+            turn.clean_output("evaluator")
+        elif turn.exec_output_manifest is not None:
+            turn.clean_output("executor")
+        elif turn.prop_output_manifest is not None:
+            turn.clean_output("proposer")
+        else:
+            raise RuntimeError(f"[{self.eid}] no output to clean in last turn")
 
     def next_turn(self) -> None:
         """创建下一个 Turn，建立目录结构，append 到 turns。"""

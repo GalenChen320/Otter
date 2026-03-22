@@ -64,6 +64,9 @@ class EvalPlusDataset(BaseDataset):
             f"Wrap your code in a ```python``` code block."
         )
 
+    def _prepare_prop_input(self, episode: Episode) -> InputManifest:
+        ...
+
     def _prepare_exec_input(self, episode: Episode) -> InputManifest:
         turn = episode.turns[-1]
 

@@ -92,6 +92,7 @@ async def run_turn(
                 break
             logger.warning("[%s] turn %d proposer output rejected (attempt %d/%d)",
                            ep.eid, ep.total_turns, attempt, settings.proposer_retry)
+            ep.clean_last_output()
         else:
             raise RuntimeError(f"[{ep.eid}] proposer failed after {settings.proposer_retry} attempts")
 
@@ -107,6 +108,7 @@ async def run_turn(
                 break
             logger.warning("[%s] turn %d executor output rejected (attempt %d/%d)",
                            ep.eid, ep.total_turns, attempt, settings.executor_retry)
+            ep.clean_last_output()
         else:
             raise RuntimeError(f"[{ep.eid}] executor failed after {settings.executor_retry} attempts")
 
@@ -122,6 +124,7 @@ async def run_turn(
                 break
             logger.warning("[%s] turn %d evaluator output rejected (attempt %d/%d)",
                            ep.eid, ep.total_turns, attempt, settings.evaluator_retry)
+            ep.clean_last_output()
         else:
             raise RuntimeError(f"[{ep.eid}] evaluator failed after {settings.evaluator_retry} attempts")
 

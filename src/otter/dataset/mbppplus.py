@@ -72,6 +72,9 @@ class MBPPPlusDataset(BaseDataset):
             f"Any import of a non-standard library will cause a runtime error."
         )
 
+    def _prepare_prop_input(self, episode: Episode) -> InputManifest:
+        ...
+
     def _prepare_exec_input(self, episode: Episode) -> InputManifest:
         turn = episode.turns[-1]
 

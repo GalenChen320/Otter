@@ -103,15 +103,15 @@ class BaseDataset(ABC):
 
     def validate_prop_output(self, episode: Episode, manifest: OutputManifest) -> bool:
         """验收 Proposer 输出，返回 True 表示通过。"""
-        return True
+        return False
 
     def validate_exec_output(self, episode: Episode, manifest: OutputManifest) -> bool:
         """验收 Executor 输出，返回 True 表示通过。"""
-        return True
+        return False
 
     def validate_eval_output(self, episode: Episode, manifest: OutputManifest) -> bool:
         """验收 Evaluator 输出，返回 True 表示通过。"""
-        return True
+        return False
 
 
 __all__ = [
