@@ -9,7 +9,7 @@ OpenCode 通过 npm 安装（opencode-ai），
 """
 
 import json
-import subprocess
+import shlex
 
 from pydantic import BaseModel
 
@@ -99,37 +99,29 @@ class OpenCodeDriver(BaseAgentDriver):
         config_payload = json.dumps(opencode_cfg, indent=2, ensure_ascii=False) + "\n"
         self.write_file_to_container(container_name, _CONFIG_JSON_PATH, config_payload)
 
-    def run(
+    def build_command(
         self,
-        container_name: str,
         prompt: str,
         *,
         work_dir: str = "/app",
-        timeout: int,
-    ) -> subprocess.CompletedProcess:
-        """在容器内执行 OpenCode 任务。
+    ) -> tuple[str, dict]:
+        """构建 OpenCode 执行命令和参数。
 
         使用 opencode run --model {provider}/{model} 的形式传入模型，
         prompt 直接作为位置参数传入。
         """
         cfg = self.cfg
         model_spec = f"custom/{cfg.model_name}"
-        # 与 reference/opencode/start.sh 保持一致：将 prompt_extra 拼接在用户 prompt 前面
         full_prompt = _PROMPT_EXTRA + prompt
-        return subprocess.run(
-            [
-                "docker", "exec", "-w", work_dir,
-                "-e", f"HOME={_HOME_DIR}",
-                "-e", "DISABLE_SEND_PV=1",
-                container_name,
-                "opencode", "run",
-                "--model", model_spec,
-                full_prompt,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
+
+        env = {
+            "HOME": _HOME_DIR,
+            "DISABLE_SEND_PV": "1",
+        }
+
+        cmd = f"opencode run --model {model_spec} {shlex.quote(full_prompt)}"
+
+        return cmd, {"workdir": work_dir, "environment": env}
 
     def parse_result(self, result: subprocess.CompletedProcess) -> dict:
         """解析 OpenCode 的执行结果。

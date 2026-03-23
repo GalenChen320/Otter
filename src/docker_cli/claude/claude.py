@@ -9,6 +9,7 @@ Claude Code 通过 npm 安装 @anthropic-ai/claude-code，
 """
 
 import json
+import shlex
 import subprocess
 from pydantic import BaseModel, field_validator
 
@@ -91,47 +92,35 @@ class ClaudeDriver(BaseAgentDriver):
             json.dumps(onboarding_config, indent=4, ensure_ascii=False),
         )
 
-    def run(
+    def build_command(
         self,
-        container_name: str,
         prompt: str,
         *,
         work_dir: str = "/app",
-        timeout: int,
-    ) -> subprocess.CompletedProcess:
-        """在容器内执行 Claude Code 任务。"""
+    ) -> tuple[str, dict]:
+        """构建 Claude Code 执行命令和参数。"""
         cfg = self.cfg
-        allowed_tools_args = ["--allowedTools"] + cfg.allowed_tools
+        allowed_tools = " ".join(cfg.allowed_tools)
 
-        env_args = [
-            "-e", f"ANTHROPIC_API_KEY={cfg.api_key}",
-            "-e", f"ANTHROPIC_MODEL={cfg.model_name}",
-            "-e", "DISABLE_AUTOUPDATER=1",
-            "-e", "DISABLE_SEND_PV=1",
-            "-e", "DISABLE_TELEMETRY=1",
-            "-e", "IS_SANDBOX=1",
-        ]
+        env = {
+            "ANTHROPIC_API_KEY": cfg.api_key,
+            "ANTHROPIC_MODEL": cfg.model_name,
+            "DISABLE_AUTOUPDATER": "1",
+            "DISABLE_SEND_PV": "1",
+            "DISABLE_TELEMETRY": "1",
+            "IS_SANDBOX": "1",
+        }
         if cfg.base_url:
-            env_args += ["-e", f"ANTHROPIC_BASE_URL={cfg.base_url}"]
+            env["ANTHROPIC_BASE_URL"] = cfg.base_url
 
-        return subprocess.run(
-            [
-                "docker", "exec",
-                "-w", work_dir,
-                *env_args,
-                container_name,
-                cfg.agent_bin,
-                "--verbose",
-                "--print",
-                "--output-format", "json",
-                "--model", cfg.model_name,
-                *allowed_tools_args,
-                "-p", prompt,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=timeout,
+        cmd = (
+            f"{cfg.agent_bin} --verbose --print --output-format json "
+            f"--model {cfg.model_name} "
+            f"--allowedTools {allowed_tools} "
+            f"-p {shlex.quote(prompt)}"
         )
+
+        return cmd, {"workdir": work_dir, "environment": env}
 
     def parse_result(self, result: subprocess.CompletedProcess) -> dict:
         """解析 Claude Code 的 JSON 输出，提取 token 用量、耗时、文本回答和错误信息。"""

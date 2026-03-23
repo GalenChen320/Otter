@@ -12,8 +12,6 @@ OPENAI_BASE_URL 通过环境变量传入，
 
 import json
 import shlex
-import subprocess
-import time
 
 from pydantic import BaseModel
 
@@ -93,52 +91,39 @@ class CodexDriver(BaseAgentDriver):
             config_toml,
         )
 
-    def run(
+    def build_command(
         self,
-        container_name: str,
         prompt: str,
         *,
         work_dir: str = "/app",
-        timeout: int,
-    ) -> subprocess.CompletedProcess:
-        """在容器内执行 Codex CLI 任务。
+    ) -> tuple[str, dict]:
+        """构建 Codex CLI 执行命令和参数。
 
         使用 codex exec 子命令以全自动模式运行：
         - --dangerously-bypass-approvals-and-sandbox：跳过沙箱审批，全自动执行
         - --skip-git-repo-check：跳过 git 仓库检查
         - --json：以 JSONL 格式输出结构化事件流
-        - CODEX_HOME：指定配置目录（auth.json 所在位置）
-        - OPENAI_BASE_URL：指定 API 端点（兼容 OpenAI 格式的第三方服务）
         """
         cfg = self.cfg
-        # model 取最后一段（去掉 provider 前缀，如 "openai/o4-mini" → "o4-mini"）
         model = cfg.model_name.split("/")[-1]
         escaped_prompt = shlex.quote(prompt)
 
-        start_time = time.monotonic()
-        result = subprocess.run(
-            [
-                "docker", "exec", "-w", work_dir,
-                "-e", f"HOME={_HOME_DIR}",
-                "-e", f"CODEX_HOME={_CODEX_HOME}",
-                "-e", f"OPENAI_API_KEY={cfg.api_key}",
-                container_name,
-                "sh", "-c",
-                (
-                    "codex exec "
-                    "--dangerously-bypass-approvals-and-sandbox "
-                    "--skip-git-repo-check "
-                    f"--model {model} "
-                    "--json "
-                    f"-- {escaped_prompt}"
-                ),
-            ],
-            capture_output=True,
-            text=True,
-            timeout=timeout,
+        env = {
+            "HOME": _HOME_DIR,
+            "CODEX_HOME": _CODEX_HOME,
+            "OPENAI_API_KEY": cfg.api_key,
+        }
+
+        cmd = (
+            "codex exec "
+            "--dangerously-bypass-approvals-and-sandbox "
+            "--skip-git-repo-check "
+            f"--model {model} "
+            "--json "
+            f"-- {escaped_prompt}"
         )
-        result._elapsed_seconds = time.monotonic() - start_time
-        return result
+
+        return cmd, {"workdir": work_dir, "environment": env}
 
     def parse_result(self, result: subprocess.CompletedProcess) -> dict:
         """解析 Codex CLI 的 JSONL 输出，提取 token 用量、耗时、文本回答和错误信息。
@@ -172,7 +157,7 @@ class CodexDriver(BaseAgentDriver):
                 if content:
                     messages.append(content)
 
-        elapsed = getattr(result, "_elapsed_seconds", 0.0)
+        elapsed = 0.0
 
         error = ""
         if result.returncode != 0:

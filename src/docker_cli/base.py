@@ -14,7 +14,7 @@ class BaseAgentDriver(ABC):
     子类需实现：
     - name: 智能体标识名称
     - setup_config: 将配置写入容器
-    - run: 在容器内执行任务
+    - build_command: 构建执行命令和参数
     - parse_result: 解析执行结果
     """
 
@@ -30,15 +30,20 @@ class BaseAgentDriver(ABC):
         """将智能体所需的配置文件写入容器。"""
 
     @abstractmethod
-    def run(
+    def build_command(
         self,
-        container_name: str,
         prompt: str,
         *,
         work_dir: str = "/app",
-        timeout: int,
-    ) -> subprocess.CompletedProcess:
-        """在容器内执行智能体任务，返回 CompletedProcess。"""
+    ) -> tuple[str, dict]:
+        """构建在容器内执行的命令和参数。
+
+        Returns:
+            (command, extra_params) 元组，其中：
+            - command: 要执行的 shell 命令字符串
+            - extra_params: 传给 exec_container 的额外参数，
+              如 {"workdir": ..., "environment": {...}}
+        """
 
     @abstractmethod
     def parse_result(self, result: subprocess.CompletedProcess) -> dict:

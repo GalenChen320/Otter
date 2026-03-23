@@ -8,11 +8,11 @@ OpenHands 通过 Dockerfile 安装（openhands-ai），安装在 /opt/openhands-
 参考：https://github.com/OpenHands/OpenHands
 """
 
-import subprocess
+import shlex
 
 from pydantic import BaseModel
 
-from docker_cli.base import AgentDriver
+from docker_cli.base import BaseAgentDriver
 
 
 # OpenHands 运行时所需的固定环境变量（对应 start.sh 中的 export 配置）
@@ -52,7 +52,7 @@ class OpenHandsConfig(BaseModel):
     openhands_version: str = "latest"
 
 
-class OpenHandsDriver(AgentDriver):
+class OpenHandsDriver(BaseAgentDriver):
     """OpenHands 编码智能体 Driver。"""
 
     name = "openhands"
@@ -64,48 +64,31 @@ class OpenHandsDriver(AgentDriver):
     def setup_config(self, container_name: str) -> None:
         """OpenHands 通过环境变量传递配置，无需写入配置文件。"""
 
-    def run(
+    def build_command(
         self,
-        container_name: str,
         prompt: str,
         *,
         work_dir: str = "/app",
-        timeout: int,
-    ) -> subprocess.CompletedProcess:
-        """在容器内执行 OpenHands 任务。
+    ) -> tuple[str, dict]:
+        """构建 OpenHands 执行命令和参数。
 
         激活 /opt/openhands-venv 虚拟环境后执行 python -m openhands.core.main。
-        所有运行时环境变量直接通过 docker exec -e 传入，无需依赖容器内的启动脚本。
-        LLM 配置通过 LLM_API_KEY / LLM_BASE_URL / LLM_MODEL 传入，
-        prompt 通过 --task 参数传入。
+        LLM 配置通过环境变量传入，prompt 通过 --task 参数传入。
         """
         cfg = self.cfg
 
-        env_args = []
-        for key, value in _OPENHANDS_ENV.items():
-            env_args += ["-e", f"{key}={value}"]
+        env = dict(_OPENHANDS_ENV)
+        env["LLM_API_KEY"] = cfg.api_key
+        env["LLM_BASE_URL"] = cfg.base_url
+        env["LLM_MODEL"] = f"hosted_vllm/{cfg.model_name}"
+        env["SANDBOX_VOLUMES"] = f"{work_dir}:/workspace:rw"
 
-        # LLM 配置
-        env_args += ["-e", f"LLM_API_KEY={cfg.api_key}"]
-        env_args += ["-e", f"LLM_BASE_URL={cfg.base_url}"]
-        env_args += ["-e", f"LLM_MODEL=hosted_vllm/{cfg.model_name}"]
-
-        # 工作目录挂载（对应 start.sh 中的 SANDBOX_VOLUMES）
-        env_args += ["-e", f"SANDBOX_VOLUMES={work_dir}:/workspace:rw"]
-
-        return subprocess.run(
-            [
-                "docker", "exec", "-w", work_dir,
-                *env_args,
-                container_name,
-                "/opt/openhands-venv/bin/python",
-                "-m", "openhands.core.main",
-                "--task", prompt,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=timeout,
+        cmd = (
+            "/opt/openhands-venv/bin/python -m openhands.core.main "
+            f"--task {shlex.quote(prompt)}"
         )
+
+        return cmd, {"workdir": work_dir, "environment": env}
 
     def parse_result(self, result: subprocess.CompletedProcess) -> dict:
         """解析 OpenHands 执行结果。
