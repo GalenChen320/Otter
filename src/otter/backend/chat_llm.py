@@ -25,10 +25,7 @@ class ChatLLMBackend:
         )
 
     async def run(self, manifest: InputManifest, output_dir: Path) -> OutputManifest:
-        params = manifest.params
-        messages = json.loads(params["msg_file"].read_text(encoding="utf-8"))
-        output_file = output_dir / "response.txt"
-        return await self._run(messages=messages, output_file=output_file)
+        return await self._run(**manifest.params, output_file=output_dir / "response.txt")
 
     async def _run(self, messages: list[dict], output_file: Path) -> OutputManifest:
         try:

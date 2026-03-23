@@ -104,25 +104,8 @@ class DockerBackend:
         await remove_image(image_tag, missing_ok=missing_ok)
 
     async def run(self, manifest, output_dir: Path) -> OutputManifest:
-        """从 InputManifest 提取参数，执行容器命令。"""
-        raw_commands = manifest.commands or []
-        params_list = manifest.command_params or []
-        commands: list[str | tuple[str, dict]] = []
-        for i, cmd in enumerate(raw_commands):
-            if i < len(params_list) and params_list[i]:
-                commands.append((cmd, params_list[i]))
-            else:
-                commands.append(cmd)
-        copy_in = None
-        if manifest.script_file is not None:
-            copy_in = [(manifest.script_file, "/tmp")]
-        timeout = manifest.timeout
-        return await self._run(
-            image_tag=manifest.image_tag,
-            commands=commands,
-            copy_in=copy_in,
-            timeout=timeout,
-        )
+        """直接将 manifest.params 透传给 _run。"""
+        return await self._run(**manifest.params)
 
     async def _run(
         self,
@@ -158,6 +141,7 @@ class DockerBackend:
             # 复制文件进容器
             for item in (copy_in or []):
                 src, dst, *rest = item
+                src = Path(src)
                 rename = rest[0] if rest else None
                 try:
                     await copy_to_container(container_name, src, dst, rename=rename)
@@ -178,7 +162,6 @@ class DockerBackend:
             # 按顺序执行命令
             for item in commands:
                 cmd, params = (item, None) if isinstance(item, str) else item
-                params = None
                 try:
                     result = await asyncio.wait_for(
                         exec_container(container_name, cmd, extra_params=params),
@@ -207,6 +190,7 @@ class DockerBackend:
             products: list[Path | None] = []
             for item in (copy_out or []):
                 src, dst, *rest = item
+                dst = Path(dst)
                 rename = rest[0] if rest else None
                 try:
                     await copy_from_container(container_name, src, dst, rename=rename)

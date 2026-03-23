@@ -88,7 +88,9 @@ class MBPPPlusDataset(BaseDataset):
         msg_file = turn.exec_input_path / "messages.json"
         msg_file.write_text(json.dumps(messages, ensure_ascii=False), encoding="utf-8")
 
-        return InputManifest(msg_file=msg_file)
+        return InputManifest(params={
+            "messages": messages,
+        })
 
     def _prepare_eval_input(self, episode: Episode) -> InputManifest:
         turn = episode.turns[-1]
@@ -109,11 +111,11 @@ class MBPPPlusDataset(BaseDataset):
         script_file = turn.eval_input_path / "solution.py"
         script_file.write_text(full_code, encoding="utf-8")
 
-        return InputManifest(
-            image_tag=self.IMAGE_TAG,
-            script_file=script_file,
-            commands=["python /tmp/solution.py"],
-        )
+        return InputManifest(params={
+            "image_tag": self.IMAGE_TAG,
+            "commands": ["python /tmp/solution.py"],
+            "copy_in": [(str(script_file), "/tmp")],
+        })
 
     async def _judge(self, episode: Episode) -> None:
         turn = episode.turns[-1]

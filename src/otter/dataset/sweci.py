@@ -318,17 +318,27 @@ class SWECIDataset(BaseDataset):
         pass
 
     def _prepare_prop_input(self, episode: Episode) -> InputManifest:
-        prompt = "who are you?"
+        settings = get_settings()
+        logger = get_logger() 
+        prompt = "请你看看当前目录下有些什么文件或文件夹？它实现了一个什么？请你将你的结果保存在 '/app/summary.txt' 中。"
 
         _, agent_image_tag = self._task_images[episode.task_id]
         setup_cmds = self._driver.build_setup_commands()
-        cmd, params = self._driver.build_command(prompt, work_dir="/app/code")
+        cmd, cmd_params = self._driver.build_command(prompt, work_dir="/app/code")
 
-        return InputManifest(
-            image_tag=agent_image_tag,
-            commands=setup_cmds + [cmd],
-            command_params=[{} for _ in setup_cmds] + [params],
-        )
+        task_dir = Path(settings.dataset.cache_dir) / "processed" / episode.task_id 
+
+        return InputManifest(params={
+            "image_tag": agent_image_tag,
+            "commands": setup_cmds + [(cmd, cmd_params)],
+            "copy_in": [
+                (str(task_dir / "current" / "code"), "/app"),
+                (str(task_dir / "non-passed"), "/app"),
+                ],
+            "copy_out": [
+                ("/app/summary.txt", ".")
+            ]
+        })
 
     def _prepare_exec_input(self, episode: Episode) -> InputManifest:
         pass
