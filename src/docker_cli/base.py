@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shlex
 import subprocess
 from abc import ABC, abstractmethod
 
@@ -13,7 +14,7 @@ class BaseAgentDriver(ABC):
 
     子类需实现：
     - name: 智能体标识名称
-    - setup_config: 将配置写入容器
+    - build_setup_commands: 构建配置写入命令
     - build_command: 构建执行命令和参数
     - parse_result: 解析执行结果
     """
@@ -26,8 +27,11 @@ class BaseAgentDriver(ABC):
     # ── 抽象方法 ──────────────────────────────────────────
 
     @abstractmethod
-    def setup_config(self, container_name: str) -> None:
-        """将智能体所需的配置文件写入容器。"""
+    def build_setup_commands(self) -> list[str]:
+        """构建将配置文件写入容器的 shell 命令列表。
+
+        每条命令会在容器启动后、主命令执行前依次运行。
+        """
 
     @abstractmethod
     def build_command(
@@ -59,22 +63,8 @@ class BaseAgentDriver(ABC):
     # ── 工具方法 ──────────────────────────────────────────
 
     @staticmethod
-    def write_file_to_container(
-        container_name: str,
-        path: str,
-        content: str,
-    ) -> None:
-        """通过 docker exec 将文件内容写入容器指定路径。"""
+    def _write_file_cmd(path: str, content: str) -> str:
+        """生成一条 shell 命令：创建父目录并写入文件内容。"""
         parent_dir = path.rsplit("/", 1)[0]
-        subprocess.run(
-            ["docker", "exec", container_name, "mkdir", "-p", parent_dir],
-            check=True,
-            capture_output=True,
-        )
-        subprocess.run(
-            ["docker", "exec", "-i", container_name, "sh", "-c", f"cat > {path}"],
-            input=content,
-            text=True,
-            check=True,
-            capture_output=True,
-        )
+        escaped = shlex.quote(content)
+        return f"mkdir -p {parent_dir} && printf %s {escaped} > {path}"

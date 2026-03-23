@@ -56,15 +56,10 @@ class OpenCodeDriver(BaseAgentDriver):
     def __init__(self, cfg: OpenCodeConfig) -> None:
         super().__init__(cfg)
 
-    def setup_config(self, container_name: str) -> None:
-        """将 OpenCode 所需的两个配置文件写入容器。
-
-        auth.json  — 存放 API key（provider 类型固定为 custom）
-        opencode.json — 存放 provider/model 配置，使用 custom openai-compatible provider
-        """
+    def build_setup_commands(self) -> list[str]:
+        """构建 OpenCode 配置写入命令。"""
         cfg = self.cfg
 
-        # 1. 写入 auth.json
         auth_payload = json.dumps(
             {
                 "custom": {
@@ -75,9 +70,7 @@ class OpenCodeDriver(BaseAgentDriver):
             indent=2,
             ensure_ascii=False,
         ) + "\n"
-        self.write_file_to_container(container_name, _AUTH_JSON_PATH, auth_payload)
 
-        # 2. 写入 opencode.json
         opencode_cfg = {
             "$schema": "https://opencode.ai/config.json",
             "permission": "allow",
@@ -97,7 +90,11 @@ class OpenCodeDriver(BaseAgentDriver):
             },
         }
         config_payload = json.dumps(opencode_cfg, indent=2, ensure_ascii=False) + "\n"
-        self.write_file_to_container(container_name, _CONFIG_JSON_PATH, config_payload)
+
+        return [
+            self._write_file_cmd(_AUTH_JSON_PATH, auth_payload),
+            self._write_file_cmd(_CONFIG_JSON_PATH, config_payload),
+        ]
 
     def build_command(
         self,

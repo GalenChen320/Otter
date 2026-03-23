@@ -61,8 +61,9 @@ class OpenHandsDriver(BaseAgentDriver):
     def __init__(self, cfg: OpenHandsConfig) -> None:
         super().__init__(cfg)
 
-    def setup_config(self, container_name: str) -> None:
+    def build_setup_commands(self) -> list[str]:
         """OpenHands 通过环境变量传递配置，无需写入配置文件。"""
+        return []
 
     def build_command(
         self,

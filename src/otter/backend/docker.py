@@ -105,7 +105,14 @@ class DockerBackend:
 
     async def run(self, manifest, output_dir: Path) -> OutputManifest:
         """从 InputManifest 提取参数，执行容器命令。"""
-        commands = manifest.commands or []
+        raw_commands = manifest.commands or []
+        params_list = manifest.command_params or []
+        commands: list[str | tuple[str, dict]] = []
+        for i, cmd in enumerate(raw_commands):
+            if i < len(params_list) and params_list[i]:
+                commands.append((cmd, params_list[i]))
+            else:
+                commands.append(cmd)
         copy_in = None
         if manifest.script_file is not None:
             copy_in = [(manifest.script_file, "/tmp")]
@@ -116,10 +123,6 @@ class DockerBackend:
             copy_in=copy_in,
             timeout=timeout,
         )
-
-    async def _on_container_started(self, container_name: str) -> None:
-        """容器启动后的 hook，子类可重写以执行初始化操作。"""
-        pass
 
     async def _run(
         self,
@@ -151,8 +154,6 @@ class DockerBackend:
                 extra_params=self._container_params,
             )
             await start_container(container_name)
-
-            await self._on_container_started(container_name)
 
             # 复制文件进容器
             for item in (copy_in or []):

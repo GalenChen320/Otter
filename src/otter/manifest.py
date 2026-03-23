@@ -28,6 +28,7 @@ class InputManifest(BaseManifest):
     image_tag: str | None = None
     script_file: Path | None = None
     commands: list[str] | None = None
+    command_params: list[dict] | None = None
     timeout: int | None = None
 
 

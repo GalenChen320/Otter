@@ -48,31 +48,13 @@ class CodexDriver(BaseAgentDriver):
     def __init__(self, cfg: CodexConfig) -> None:
         super().__init__(cfg)
 
-    def setup_config(self, container_name: str) -> None:
-        """将认证和配置文件写入容器内 CODEX_HOME 目录。
-
-        写入两个文件：
-        1. auth.json  — 存放 API Key，格式：{"OPENAI_API_KEY": "<key>"}
-        2. config.toml — 存放 openai_base_url 和 model，新版 CLI 不再接受环境变量
-
-        参考：https://developers.openai.com/codex/config-advanced
-        """
+    def build_setup_commands(self) -> list[str]:
+        """构建 Codex CLI 配置写入命令。"""
         cfg = self.cfg
         model = cfg.model_name.split("/")[-1]
 
-        # 1. 写入 auth.json
         auth_content = json.dumps({"OPENAI_API_KEY": cfg.api_key}, indent=2)
-        self.write_file_to_container(
-            container_name,
-            f"{_CODEX_HOME}/auth.json",
-            auth_content,
-        )
 
-        # 2. 写入 config.toml
-        # 使用 Model_Studio_Coding_Plan provider 块，wire_api = "chat" 兼容 dashscope 的
-        # Chat Completions API（新版 Codex 强制使用 Responses API，故固定使用 0.80.0 旧版本）。
-        # approval_policy/sandbox_mode 对应 --dangerously-bypass-approvals-and-sandbox 的配置文件等价形式。
-        # 参考：https://developers.openai.com/codex/config-advanced
         config_toml = (
             f'model = "{model}"\n'
             f'model_provider = "Model_Studio_Coding_Plan"\n'
@@ -85,11 +67,11 @@ class CodexDriver(BaseAgentDriver):
             f'env_key = "OPENAI_API_KEY"\n'
             f'wire_api = "responses"\n'
         )
-        self.write_file_to_container(
-            container_name,
-            f"{_CODEX_HOME}/config.toml",
-            config_toml,
-        )
+
+        return [
+            self._write_file_cmd(f"{_CODEX_HOME}/auth.json", auth_content),
+            self._write_file_cmd(f"{_CODEX_HOME}/config.toml", config_toml),
+        ]
 
     def build_command(
         self,

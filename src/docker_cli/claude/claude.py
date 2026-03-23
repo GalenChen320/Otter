@@ -54,8 +54,8 @@ class ClaudeDriver(BaseAgentDriver):
     def __init__(self, cfg: ClaudeConfig) -> None:
         super().__init__(cfg)
 
-    def setup_config(self, container_name: str) -> None:
-        """将 ~/.claude/settings.json 写入容器，配置权限、API Key、Base URL 和 Model。"""
+    def build_setup_commands(self) -> list[str]:
+        """构建 Claude Code 配置写入命令。"""
         cfg = self.cfg
 
         env_fields = {
@@ -77,20 +77,20 @@ class ClaudeDriver(BaseAgentDriver):
             "model": cfg.model_name,
         }
 
-        self.write_file_to_container(
-            container_name,
-            f"{cfg.agent_home}/home/.claude/settings.json",
-            json.dumps(settings, indent=4, ensure_ascii=False),
-        )
-
         onboarding_config = {
             "hasCompletedOnboarding": True,
         }
-        self.write_file_to_container(
-            container_name,
-            f"{cfg.agent_home}/home/.claude.json",
-            json.dumps(onboarding_config, indent=4, ensure_ascii=False),
-        )
+
+        return [
+            self._write_file_cmd(
+                f"{cfg.agent_home}/home/.claude/settings.json",
+                json.dumps(settings, indent=4, ensure_ascii=False),
+            ),
+            self._write_file_cmd(
+                f"{cfg.agent_home}/home/.claude.json",
+                json.dumps(onboarding_config, indent=4, ensure_ascii=False),
+            ),
+        ]
 
     def build_command(
         self,
