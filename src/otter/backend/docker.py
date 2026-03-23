@@ -178,6 +178,7 @@ class DockerBackend:
             # 按顺序执行命令
             for item in commands:
                 cmd, params = (item, None) if isinstance(item, str) else item
+                params = None
                 try:
                     result = await asyncio.wait_for(
                         exec_container(container_name, cmd, extra_params=params),

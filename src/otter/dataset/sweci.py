@@ -7,6 +7,12 @@ from huggingface_hub import HfApi
 from huggingface_hub.utils import disable_progress_bars
 
 
+from docker_cli.base import BaseAgentDriver
+from docker_cli.claude.claude import ClaudeConfig, ClaudeDriver
+from docker_cli.codex.codex import CodexConfig, CodexDriver
+from docker_cli.opencode.opencode import OpenCodeConfig, OpenCodeDriver
+from docker_cli.openhands.openhands import OpenHandsConfig, OpenHandsDriver
+
 from otter.logger import get_logger
 from otter.dataset.base import BaseDataset
 from otter.config.setting import get_settings
@@ -16,6 +22,14 @@ from otter.dataset.utils import (
     read_csv, download_hf_file, download_hf_folder,
     unzip, checkout, remove_pattern_files
 )
+
+# agent_name → (DriverClass, ConfigClass)
+AGENT_REGISTRY: dict[str, tuple[type[BaseAgentDriver], type]] = {
+    "claude":   (ClaudeDriver, ClaudeConfig),
+    "codex":    (CodexDriver, CodexConfig),
+    "opencode": (OpenCodeDriver, OpenCodeConfig),
+    "openhands": (OpenHandsDriver, OpenHandsConfig),
+}
 
 def safe_name(node_id: str) -> str:
     safe_name = "".join(c if c.isalnum() or c == '.' else '_' for c in node_id)
@@ -230,10 +244,28 @@ class SWECIDataset(BaseDataset):
         super().__init__(base_dir)
         # task_id → (base_image_tag, agent_image_tag)
         self._task_images: dict[str, tuple[str, str]] = {}
+        self._driver: BaseAgentDriver | None = None
+        self._setup_semaphore = asyncio.Semaphore(1)
 
     async def setup(self) -> None:
         download_sweci()
-        self._taskids = await initialize_sweci()        
+        self._taskids = await initialize_sweci()
+
+        # 实例化 driver
+        settings = get_settings()
+        agent_name = settings.dataset.agent_name
+        if agent_name not in AGENT_REGISTRY:
+            raise ValueError(
+                f"Unknown agent '{agent_name}', "
+                f"expected one of {list(AGENT_REGISTRY.keys())}"
+            )
+        driver_cls, config_cls = AGENT_REGISTRY[agent_name]
+        cfg = config_cls(
+            api_key=settings.dataset.agent_api_key,
+            model_name=settings.dataset.agent_model_name,
+            base_url=settings.dataset.agent_base_url,
+        )
+        self._driver = driver_cls(cfg)
 
     async def teardown(self) -> None:
         """Dataset 级别资源回收：清理所有构建的 image。"""
@@ -255,37 +287,48 @@ class SWECIDataset(BaseDataset):
 
         加载 base image + 构建 agent image，exist_ok=True 自动跳过已存在的。
         """
-        settings = get_settings()
-        logger = get_logger()
-        agent_name = settings.dataset.agent_name
+        async with self._setup_semaphore:
+            settings = get_settings()
+            logger = get_logger()
+            agent_name = settings.dataset.agent_name
 
-        if agent_name not in self.AGENT_DOCKERFILE_MAP:
-            raise ValueError(
-                f"Unknown agent '{agent_name}', "
-                f"expected one of {list(self.AGENT_DOCKERFILE_MAP.keys())}"
+            if agent_name not in self.AGENT_DOCKERFILE_MAP:
+                raise ValueError(
+                    f"Unknown agent '{agent_name}', "
+                    f"expected one of {list(self.AGENT_DOCKERFILE_MAP.keys())}"
+                )
+
+            # 加载 base image
+            tar_path = Path(settings.dataset.cache_dir) / "data" / episode.task_id / "image.tar.gz"
+            base_image_tag = await DockerBackend.load_image(tar_path, exist_ok=True)
+
+            # 构建 agent image
+            agent_image_tag = f"sweci-{agent_name}-{base_image_tag.replace(':', '-').replace('/', '-')}:latest"
+            dockerfile_path = self.AGENT_DOCKERFILE_MAP[agent_name]
+            await DockerBackend.build_image(
+                agent_image_tag,
+                dockerfile_path,
+                exist_ok=True,
+                extra_params={"buildargs": {"BASE_IMAGE": base_image_tag}},
             )
-
-        # 加载 base image
-        tar_path = Path(settings.dataset.cache_dir) / "data" / episode.task_id / "image.tar.gz"
-        base_image_tag = await DockerBackend.load_image(tar_path, exist_ok=True)
-
-        # 构建 agent image
-        agent_image_tag = f"sweci-{agent_name}-{base_image_tag.replace(':', '-').replace('/', '-')}:latest"
-        dockerfile_path = self.AGENT_DOCKERFILE_MAP[agent_name]
-        await DockerBackend.build_image(
-            agent_image_tag,
-            dockerfile_path,
-            exist_ok=True,
-            extra_params={"buildargs": {"BASE_IMAGE": base_image_tag}},
-        )
-        self._task_images[episode.task_id] = (base_image_tag, agent_image_tag)
-        logger.info("episode image ready: %s", agent_image_tag)
+            self._task_images[episode.task_id] = (base_image_tag, agent_image_tag)
+            logger.info("episode image ready: %s", agent_image_tag)
 
     async def teardown_episode(self, episode: Episode) -> None:
         pass
 
     def _prepare_prop_input(self, episode: Episode) -> InputManifest:
-        pass
+        prompt = "who are you?"
+
+        _, agent_image_tag = self._task_images[episode.task_id]
+        setup_cmds = self._driver.build_setup_commands()
+        cmd, params = self._driver.build_command(prompt, work_dir="/app/code")
+
+        return InputManifest(
+            image_tag=agent_image_tag,
+            commands=setup_cmds + [cmd],
+            command_params=[{} for _ in setup_cmds] + [params],
+        )
 
     def _prepare_exec_input(self, episode: Episode) -> InputManifest:
         pass
@@ -295,5 +338,8 @@ class SWECIDataset(BaseDataset):
 
     async def _judge(self, episode: Episode) -> None:
         pass
+
+    def validate_prop_output(self, episode: Episode, manifest) -> bool:
+        return True
     
 

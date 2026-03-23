@@ -12,6 +12,7 @@ OPENAI_BASE_URL 通过环境变量传入，
 
 import json
 import shlex
+import subprocess
 
 from pydantic import BaseModel
 

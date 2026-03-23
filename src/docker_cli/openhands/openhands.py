@@ -9,7 +9,7 @@ OpenHands 通过 Dockerfile 安装（openhands-ai），安装在 /opt/openhands-
 """
 
 import shlex
-
+import subprocess
 from pydantic import BaseModel
 
 from docker_cli.base import BaseAgentDriver

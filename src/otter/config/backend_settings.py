@@ -33,7 +33,7 @@ class DockerSettings(BackendSettings):
         description="Soft memory limit per container"
     )
     network_mode: str | None = tracked_field(
-        default="none",
+        default="host",
         description="Container network mode"
     )
     device_read_bps: str | None = tracked_field(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shlex
+import base64
 import subprocess
 from abc import ABC, abstractmethod
 
@@ -66,5 +67,8 @@ class BaseAgentDriver(ABC):
     def _write_file_cmd(path: str, content: str) -> str:
         """生成一条 shell 命令：创建父目录并写入文件内容。"""
         parent_dir = path.rsplit("/", 1)[0]
-        escaped = shlex.quote(content)
-        return f"mkdir -p {parent_dir} && printf %s {escaped} > {path}"
+        encoded = base64.b64encode(content.encode("utf-8")).decode()
+        return (
+            f"mkdir -p {parent_dir} && "
+            f"echo {shlex.quote(encoded)} | base64 -d > {path}"
+        )

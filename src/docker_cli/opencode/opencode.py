@@ -10,7 +10,7 @@ OpenCode 通过 npm 安装（opencode-ai），
 
 import json
 import shlex
-
+import subprocess
 from pydantic import BaseModel
 
 from docker_cli.base import BaseAgentDriver

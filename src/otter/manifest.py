@@ -1,4 +1,4 @@
-from typing import Annotated, Literal, Self
+from typing import Annotated, Literal, Self, Any
 from pathlib import Path
 from pydantic import BaseModel, Discriminator
 
@@ -21,15 +21,7 @@ class BaseManifest(BaseModel):
 
 
 class InputManifest(BaseManifest):
-    # ChatLLMBackend
-    msg_file: Path | None = None
-
-    # DockerBackend
-    image_tag: str | None = None
-    script_file: Path | None = None
-    commands: list[str] | None = None
-    command_params: list[dict] | None = None
-    timeout: int | None = None
+    params: dict[str, Any] 
 
 
 class Result(BaseModel):

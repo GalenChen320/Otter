@@ -37,6 +37,18 @@ class SWECISettings(DatasetSettings):
         default="opencode",
         description="AI CLI agent to use (claude, codex, opencode, openhands)"
     )
+    agent_api_key: str = untracked_field(
+        default="",
+        description="API key for the AI CLI agent"
+    )
+    agent_model_name: str = tracked_field(
+        default="",
+        description="Model name for the AI CLI agent"
+    )
+    agent_base_url: str = tracked_field(
+        default="",
+        description="Base URL for the AI CLI agent API"
+    )
     cache_dir: Path = untracked_field(
         default=ROOT_DIR / "data" / "cache",
         description="Local cache directory for downloaded datasets"

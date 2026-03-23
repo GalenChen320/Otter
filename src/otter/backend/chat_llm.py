@@ -25,8 +25,8 @@ class ChatLLMBackend:
         )
 
     async def run(self, manifest: InputManifest, output_dir: Path) -> OutputManifest:
-        """从 InputManifest 提取参数，调用 LLM。"""
-        messages = json.loads(manifest.msg_file.read_text(encoding="utf-8"))
+        params = manifest.params
+        messages = json.loads(params["msg_file"].read_text(encoding="utf-8"))
         output_file = output_dir / "response.txt"
         return await self._run(messages=messages, output_file=output_file)
 

@@ -377,7 +377,7 @@ def sync_exec_container(
 
     # Step 2: Execute the command
     exit_code, output = container.exec_run(
-        cmd=command,
+        cmd=["sh", "-c", command],
         demux=True,
         **(extra_params or {}),
     )
