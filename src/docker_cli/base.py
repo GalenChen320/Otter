@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from pydantic import BaseModel
 
 
-class AgentDriver(ABC):
+class BaseAgentDriver(ABC):
     """编码智能体 Driver 的抽象基类。
 
     子类需实现：

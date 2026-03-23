@@ -17,7 +17,7 @@ import time
 
 from pydantic import BaseModel
 
-from docker_cli.base import AgentDriver
+from docker_cli.base import BaseAgentDriver
 
 # Dockerfile 的 wrapper 脚本强制设置 HOME=/opt/agent/home，
 # 因此 Codex 的配置目录也应在此目录下
@@ -41,7 +41,7 @@ class CodexConfig(BaseModel):
     agent_home: str = "/opt/agent"
 
 
-class CodexDriver(AgentDriver):
+class CodexDriver(BaseAgentDriver):
     """OpenAI Codex CLI 编码智能体 Driver。"""
 
     name = "codex"

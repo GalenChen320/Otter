@@ -218,6 +218,11 @@ async def initialize_sweci():
 
 class SWECIDataset(BaseDataset):
 
+    def __init__(self, base_dir: Path) -> None:
+        super().__init__(base_dir)
+        self.base_image_tags = []
+        self.agnet_image_tages = []
+
     async def setup(self) -> None:
         download_sweci()
         self._taskids = await initialize_sweci()        
@@ -225,6 +230,26 @@ class SWECIDataset(BaseDataset):
     @property
     def task_ids(self) -> list[str]:
         return self._taskids
+
+    async def setup_episode(self, episode: Episode) -> None:
+        """Episode 级别初始化，每道题开始前调用。"""
+        settings = get_settings()
+        logger = get_logger()
+
+        base_image = settings.dataset.cache_dir / "data" / episode.task_id / "image.tar.gz"
+        base_image_tag = await DockerBackend.load_image(base_image)
+        await DockerBackend.build_image(extra_params={})
+
+        await DockerBackend.build_image(
+            exist_ok = True 
+        )
+
+    async def teardown_episode(self, episode: Episode) -> None:
+        """Episode 级别资源回收，每道题结束后调用。"""
+        pass
+
+    def _prepare_prop_input(self, episode: Episode) -> InputManifest:
+        pass
 
     def _prepare_exec_input(self, episode: Episode) -> InputManifest:
         pass

@@ -12,7 +12,7 @@ import json
 import subprocess
 from pydantic import BaseModel, field_validator
 
-from docker_cli.base import AgentDriver
+from docker_cli.base import BaseAgentDriver
 
 
 class ClaudeConfig(BaseModel):
@@ -44,7 +44,7 @@ class ClaudeConfig(BaseModel):
         return v
 
 
-class ClaudeDriver(AgentDriver):
+class ClaudeDriver(BaseAgentDriver):
     """Claude Code 编码智能体 Driver。"""
 
     name = "claude"

@@ -13,7 +13,7 @@ import subprocess
 
 from pydantic import BaseModel
 
-from docker_cli.base import AgentDriver
+from docker_cli.base import BaseAgentDriver
 
 # Dockerfile 的 wrapper 脚本强制设置 HOME=/opt/agent/home，
 # 因此 opencode 实际读取的配置路径均在此目录下
@@ -47,7 +47,7 @@ class OpenCodeConfig(BaseModel):
     agent_home: str = "/opt/agent"
 
 
-class OpenCodeDriver(AgentDriver):
+class OpenCodeDriver(BaseAgentDriver):
     """OpenCode 编码智能体 Driver。"""
 
     name = "opencode"
