@@ -123,6 +123,7 @@ def sync_build_image(
         _get_client().images.get(image_tag)
         if not exist_ok:
             raise ValueError(f"Image '{image_tag}' already exists.")
+        return
     except docker.errors.ImageNotFound:
         pass
 

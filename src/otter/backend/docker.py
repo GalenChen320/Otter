@@ -117,6 +117,10 @@ class DockerBackend:
             timeout=timeout,
         )
 
+    async def _on_container_started(self, container_name: str) -> None:
+        """容器启动后的 hook，子类可重写以执行初始化操作。"""
+        pass
+
     async def _run(
         self,
         image_tag: str,
@@ -147,6 +151,8 @@ class DockerBackend:
                 extra_params=self._container_params,
             )
             await start_container(container_name)
+
+            await self._on_container_started(container_name)
 
             # 复制文件进容器
             for item in (copy_in or []):

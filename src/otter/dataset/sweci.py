@@ -218,34 +218,70 @@ async def initialize_sweci():
 
 class SWECIDataset(BaseDataset):
 
+    # agent name → Dockerfile 路径（相对于项目根目录）
+    AGENT_DOCKERFILE_MAP: dict[str, Path] = {
+        "claude":   Path(__file__).resolve().parents[2] / "docker_cli" / "claude" / "Dockerfile.claude",
+        "codex":    Path(__file__).resolve().parents[2] / "docker_cli" / "codex" / "Dockerfile.codex",
+        "opencode": Path(__file__).resolve().parents[2] / "docker_cli" / "opencode" / "Dockerfile.opencode",
+        "openhands": Path(__file__).resolve().parents[2] / "docker_cli" / "openhands" / "Dockerfile.openhands",
+    }
+
     def __init__(self, base_dir: Path) -> None:
         super().__init__(base_dir)
-        self.base_image_tags = []
-        self.agnet_image_tages = []
+        # task_id → (base_image_tag, agent_image_tag)
+        self._task_images: dict[str, tuple[str, str]] = {}
 
     async def setup(self) -> None:
         download_sweci()
         self._taskids = await initialize_sweci()        
+
+    async def teardown(self) -> None:
+        """Dataset 级别资源回收：清理所有构建的 image。"""
+        logger = get_logger()
+        cleaned: set[str] = set()
+        for base_tag, agent_tag in self._task_images.values():
+            for tag in (agent_tag, base_tag):
+                if tag not in cleaned:
+                    await DockerBackend.remove_image(tag, missing_ok=True)
+                    cleaned.add(tag)
+                    logger.info("removed image: %s", tag)
 
     @property
     def task_ids(self) -> list[str]:
         return self._taskids
 
     async def setup_episode(self, episode: Episode) -> None:
-        """Episode 级别初始化，每道题开始前调用。"""
+        """Episode 级别初始化。
+
+        加载 base image + 构建 agent image，exist_ok=True 自动跳过已存在的。
+        """
         settings = get_settings()
         logger = get_logger()
+        agent_name = settings.dataset.agent_name
 
-        base_image = settings.dataset.cache_dir / "data" / episode.task_id / "image.tar.gz"
-        base_image_tag = await DockerBackend.load_image(base_image)
-        await DockerBackend.build_image(extra_params={})
+        if agent_name not in self.AGENT_DOCKERFILE_MAP:
+            raise ValueError(
+                f"Unknown agent '{agent_name}', "
+                f"expected one of {list(self.AGENT_DOCKERFILE_MAP.keys())}"
+            )
 
+        # 加载 base image
+        tar_path = Path(settings.dataset.cache_dir) / "data" / episode.task_id / "image.tar.gz"
+        base_image_tag = await DockerBackend.load_image(tar_path, exist_ok=True)
+
+        # 构建 agent image
+        agent_image_tag = f"sweci-{agent_name}-{base_image_tag.replace(':', '-').replace('/', '-')}:latest"
+        dockerfile_path = self.AGENT_DOCKERFILE_MAP[agent_name]
         await DockerBackend.build_image(
-            exist_ok = True 
+            agent_image_tag,
+            dockerfile_path,
+            exist_ok=True,
+            extra_params={"buildargs": {"BASE_IMAGE": base_image_tag}},
         )
+        self._task_images[episode.task_id] = (base_image_tag, agent_image_tag)
+        logger.info("episode image ready: %s", agent_image_tag)
 
     async def teardown_episode(self, episode: Episode) -> None:
-        """Episode 级别资源回收，每道题结束后调用。"""
         pass
 
     def _prepare_prop_input(self, episode: Episode) -> InputManifest:

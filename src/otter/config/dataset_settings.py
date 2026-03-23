@@ -33,6 +33,10 @@ class SWECISettings(DatasetSettings):
         default="default",
         description="Splitting of the SWE-CI dataset"
     )
+    agent_name: str = tracked_field(
+        default="opencode",
+        description="AI CLI agent to use (claude, codex, opencode, openhands)"
+    )
     cache_dir: Path = untracked_field(
         default=ROOT_DIR / "data" / "cache",
         description="Local cache directory for downloaded datasets"
