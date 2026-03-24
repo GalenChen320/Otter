@@ -331,7 +331,7 @@ class SWECIDataset(BaseDataset):
     async def teardown_episode(self, episode: Episode) -> None:
         pass
 
-    def previous_turn(self, episode: Episode) -> Turn | None:
+    def last_valid_turn(self, episode: Episode) -> Turn | None:
         for turn in reversed(episode.turns):
             if (turn.turn_dir / "non-passed").is_dir():
                 return turn
@@ -351,7 +351,7 @@ class SWECIDataset(BaseDataset):
         task_dir = Path(settings.dataset.cache_dir) / "processed" / episode.task_id 
         
         code_dir, nonpassed_dir = None, None
-        prev_turn = self.previous_turn(episode)
+        prev_turn = self.last_valid_turn(episode)
         if prev_turn:
             code_dir = prev_turn.turn_dir / "exec_output" / "code"
             nonpassed_dir = prev_turn.turn_dir / "non-passed"
@@ -384,7 +384,7 @@ class SWECIDataset(BaseDataset):
         task_dir = Path(settings.dataset.cache_dir) / "processed" / episode.task_id 
 
         code_dir = None
-        prev_turn = self.previous_turn(episode)
+        prev_turn = self.last_valid_turn(episode)
         if prev_turn:
             code_dir = prev_turn.turn_dir / "exec_output" / "code"
         else:
