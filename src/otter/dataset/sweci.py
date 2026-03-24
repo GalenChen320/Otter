@@ -15,7 +15,7 @@ from docker_cli.openhands.openhands import OpenHandsConfig, OpenHandsDriver
 from otter.logger import get_logger
 from otter.dataset.base import BaseDataset
 from otter.config.setting import get_settings
-from otter.episode import Episode, InputManifest, OutputManifest
+from otter.episode import Episode, InputManifest, OutputManifest, Turn
 from otter.backend.docker import DockerBackend
 from otter.dataset.utils import (
     read_csv, download_hf_file, download_hf_folder,
@@ -331,6 +331,12 @@ class SWECIDataset(BaseDataset):
     async def teardown_episode(self, episode: Episode) -> None:
         pass
 
+    def previous_turn(self, episode: Episode) -> Turn | None:
+        for turn in reversed(episode.turns):
+            if (turn.turn_dir / "non-passed").is_dir():
+                return turn
+        return None
+
     def _prepare_prop_input(self, episode: Episode) -> InputManifest:
         settings = get_settings()
         logger = get_logger() 
@@ -345,11 +351,10 @@ class SWECIDataset(BaseDataset):
         task_dir = Path(settings.dataset.cache_dir) / "processed" / episode.task_id 
         
         code_dir, nonpassed_dir = None, None
-        for turn in reversed(episode.turns):
-            if (turn.turn_dir / "non-passed").is_dir():
-                code_dir = turn.turn_dir / "exec_output" / "code"
-                nonpassed_dir = turn.turn_dir / "non-passed"
-                break
+        prev_turn = self.previous_turn(episode)
+        if prev_turn:
+            code_dir = prev_turn.turn_dir / "exec_output" / "code"
+            nonpassed_dir = prev_turn.turn_dir / "non-passed"
         else:
             code_dir = task_dir / "current" / "code"
             nonpassed_dir = task_dir / "non-passed"
@@ -378,11 +383,18 @@ class SWECIDataset(BaseDataset):
 
         task_dir = Path(settings.dataset.cache_dir) / "processed" / episode.task_id 
 
+        code_dir = None
+        prev_turn = self.previous_turn(episode)
+        if prev_turn:
+            code_dir = prev_turn.turn_dir / "exec_output" / "code"
+        else:
+            code_dir = task_dir / "current" / "code"
+
         return InputManifest(params={
             "image_tag": agent_image_tag,
             "commands": setup_cmds + [(cmd, cmd_params)],
             "copy_in": [
-                (str(task_dir / "current" / "code"), "/app"),
+                (str(code_dir), "/app"),
                 (str(episode.turns[-1].prop_output_path  / "requirement.xml"), "/app"),
                 ],
             "copy_out": [
@@ -407,7 +419,7 @@ class SWECIDataset(BaseDataset):
                 ),
             ],
             "copy_in": [
-                (str(task_dir / "current" / "code"), "/app"),
+                (str(episode.turns[-1].turn_dir / "exec_output" / "code"), "/app"),
                 ],
             "copy_out": [
                 (container_report, episode.turns[-1].eval_output_path),
