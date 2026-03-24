@@ -29,7 +29,7 @@ _PROMPT_EXTRA = """\
 
 ## 用户需求如下
 """
-
+_PROMPT_EXTRA = ""
 
 class OpenCodeConfig(BaseModel):
     """OpenCode 智能体配置。"""

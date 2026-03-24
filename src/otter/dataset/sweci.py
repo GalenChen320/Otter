@@ -6,7 +6,6 @@ from pathlib import Path
 from huggingface_hub import HfApi
 from huggingface_hub.utils import disable_progress_bars
 
-
 from docker_cli.base import BaseAgentDriver
 from docker_cli.claude.claude import ClaudeConfig, ClaudeDriver
 from docker_cli.codex.codex import CodexConfig, CodexDriver
@@ -16,12 +15,13 @@ from docker_cli.openhands.openhands import OpenHandsConfig, OpenHandsDriver
 from otter.logger import get_logger
 from otter.dataset.base import BaseDataset
 from otter.config.setting import get_settings
-from otter.episode import Episode, InputManifest
+from otter.episode import Episode, InputManifest, OutputManifest
 from otter.backend.docker import DockerBackend
 from otter.dataset.utils import (
     read_csv, download_hf_file, download_hf_folder,
-    unzip, checkout, remove_pattern_files
+    unzip, checkout, remove_pattern_files, load_prompt
 )
+
 
 # agent_name → (DriverClass, ConfigClass)
 AGENT_REGISTRY: dict[str, tuple[type[BaseAgentDriver], type]] = {
@@ -29,6 +29,14 @@ AGENT_REGISTRY: dict[str, tuple[type[BaseAgentDriver], type]] = {
     "codex":    (CodexDriver, CodexConfig),
     "opencode": (OpenCodeDriver, OpenCodeConfig),
     "openhands": (OpenHandsDriver, OpenHandsConfig),
+}
+
+# agent name → Dockerfile 路径（相对于项目根目录）
+AGENT_DOCKERFILE_MAP: dict[str, Path] = {
+    "claude":   Path(__file__).resolve().parents[2] / "docker_cli" / "claude" / "Dockerfile.claude",
+    "codex":    Path(__file__).resolve().parents[2] / "docker_cli" / "codex" / "Dockerfile.codex",
+    "opencode": Path(__file__).resolve().parents[2] / "docker_cli" / "opencode" / "Dockerfile.opencode",
+    "openhands": Path(__file__).resolve().parents[2] / "docker_cli" / "openhands" / "Dockerfile.openhands",
 }
 
 def safe_name(node_id: str) -> str:
@@ -227,18 +235,7 @@ async def initialize_sweci():
     return [task['task_id'] for task in metadata]
 
 
-
-
-
 class SWECIDataset(BaseDataset):
-
-    # agent name → Dockerfile 路径（相对于项目根目录）
-    AGENT_DOCKERFILE_MAP: dict[str, Path] = {
-        "claude":   Path(__file__).resolve().parents[2] / "docker_cli" / "claude" / "Dockerfile.claude",
-        "codex":    Path(__file__).resolve().parents[2] / "docker_cli" / "codex" / "Dockerfile.codex",
-        "opencode": Path(__file__).resolve().parents[2] / "docker_cli" / "opencode" / "Dockerfile.opencode",
-        "openhands": Path(__file__).resolve().parents[2] / "docker_cli" / "openhands" / "Dockerfile.openhands",
-    }
 
     def __init__(self, base_dir: Path) -> None:
         super().__init__(base_dir)
@@ -246,6 +243,9 @@ class SWECIDataset(BaseDataset):
         self._task_images: dict[str, tuple[str, str]] = {}
         self._driver: BaseAgentDriver | None = None
         self._setup_semaphore = asyncio.Semaphore(1)
+        prompt_file = Path(__file__).parent / "sweci_prompt.jinja2"
+        self.architect_prompt = load_prompt(prompt_file, {"role": "architect"})
+        self.programmer_prompt = load_prompt(prompt_file, {"role": "programmer"})
 
     async def setup(self) -> None:
         download_sweci()
@@ -292,10 +292,10 @@ class SWECIDataset(BaseDataset):
             logger = get_logger()
             agent_name = settings.dataset.agent_name
 
-            if agent_name not in self.AGENT_DOCKERFILE_MAP:
+            if agent_name not in AGENT_DOCKERFILE_MAP:
                 raise ValueError(
                     f"Unknown agent '{agent_name}', "
-                    f"expected one of {list(self.AGENT_DOCKERFILE_MAP.keys())}"
+                    f"expected one of {list(AGENT_DOCKERFILE_MAP.keys())}"
                 )
 
             # 加载 base image
@@ -304,7 +304,7 @@ class SWECIDataset(BaseDataset):
 
             # 构建 agent image
             agent_image_tag = f"sweci-{agent_name}-{base_image_tag.replace(':', '-').replace('/', '-')}:latest"
-            dockerfile_path = self.AGENT_DOCKERFILE_MAP[agent_name]
+            dockerfile_path = AGENT_DOCKERFILE_MAP[agent_name]
             await DockerBackend.build_image(
                 agent_image_tag,
                 dockerfile_path,
@@ -320,11 +320,47 @@ class SWECIDataset(BaseDataset):
     def _prepare_prop_input(self, episode: Episode) -> InputManifest:
         settings = get_settings()
         logger = get_logger() 
-        prompt = "请你看看当前目录下有些什么文件或文件夹？它实现了一个什么？请你将你的结果保存在 '/app/summary.txt' 中。"
 
         _, agent_image_tag = self._task_images[episode.task_id]
         setup_cmds = self._driver.build_setup_commands()
-        cmd, cmd_params = self._driver.build_command(prompt, work_dir="/app/code")
+        cmd, cmd_params = self._driver.build_command(
+            self.architect_prompt,
+            work_dir="/app/code"
+            )
+        
+        task_dir = Path(settings.dataset.cache_dir) / "processed" / episode.task_id 
+        
+        code_dir, nonpassed_dir = None, None
+        for turn in reversed(episode.turns):
+            if (turn.turn_dir / "non-passed").is_dir():
+                code_dir = turn.turn_dir / "exec_output" / "code"
+                nonpassed_dir = turn.turn_dir / "non-passed"
+                break
+        else:
+            code_dir = task_dir / "current" / "code"
+            nonpassed_dir = task_dir / "non-passed"
+
+        return InputManifest(params={
+            "image_tag": agent_image_tag,
+            "commands": setup_cmds + [(cmd, cmd_params)],
+            "copy_in": [
+                (str(code_dir), "/app"), (str(nonpassed_dir), "/app"),
+            ],
+            "copy_out": [
+                ("/app/requirement.xml", episode.turns[-1].prop_output_path)
+            ]
+        })
+
+    def _prepare_exec_input(self, episode: Episode) -> InputManifest:
+        settings = get_settings()
+        logger = get_logger() 
+
+        _, agent_image_tag = self._task_images[episode.task_id]
+        setup_cmds = self._driver.build_setup_commands()
+        cmd, cmd_params = self._driver.build_command(
+            self.programmer_prompt, 
+            work_dir="/app/code"
+            )
 
         task_dir = Path(settings.dataset.cache_dir) / "processed" / episode.task_id 
 
@@ -333,23 +369,80 @@ class SWECIDataset(BaseDataset):
             "commands": setup_cmds + [(cmd, cmd_params)],
             "copy_in": [
                 (str(task_dir / "current" / "code"), "/app"),
-                (str(task_dir / "non-passed"), "/app"),
+                (str(episode.turns[-1].prop_output_path  / "requirement.xml"), "/app"),
                 ],
             "copy_out": [
-                ("/app/summary.txt", ".")
+                ("/app/code", episode.turns[-1].exec_output_path)
             ]
         })
 
-    def _prepare_exec_input(self, episode: Episode) -> InputManifest:
-        pass
-
     def _prepare_eval_input(self, episode: Episode) -> InputManifest:
-        pass
+        settings = get_settings()
+        logger = get_logger() 
 
-    async def _judge(self, episode: Episode) -> None:
-        pass
+        _, agent_image_tag = self._task_images[episode.task_id]
+        task_dir = Path(settings.dataset.cache_dir) / "processed" / episode.task_id 
+        container_report = "/tmp/test_report.json"
 
-    def validate_prop_output(self, episode: Episode, manifest) -> bool:
+        return InputManifest(params={
+            "image_tag": agent_image_tag,
+            "commands": [
+                (
+                    f"python -m pytest tests --color=no --tb=short --disable-warnings -rfE --rootdir=/app/code --json-report --json-report-file={container_report}",
+                    {"workdir": "/app/code", "environment": {"PYTHONPATH": "src:."}},
+                ),
+            ],
+            "copy_in": [
+                (str(task_dir / "current" / "code"), "/app"),
+                ],
+            "copy_out": [
+                (container_report, episode.turns[-1].eval_output_path),
+            ]
+        })
+
+    def validate_prop_output(self, manifest: OutputManifest) -> bool:
+        if manifest.unexpected != "":
+            return False
+        for result in manifest.debug_info.copy_in:
+            if result.returncode != 0:
+                return False
+        for result in manifest.debug_info.commands:
+            if result.returncode != 0:
+                return False
+        for result in manifest.debug_info.copy_out:
+            if result.returncode != 0:
+                return False
         return True
     
+    def validate_exec_output(self, manifest: OutputManifest) -> bool:
+        if manifest.unexpected != "":
+            return False
+        for result in manifest.debug_info.copy_in:
+            if result.returncode != 0:
+                return False
+        for result in manifest.debug_info.commands:
+            if result.returncode != 0:
+                return False
+        for result in manifest.debug_info.copy_out:
+            if result.returncode != 0:
+                return False
+        return True
 
+    def validate_eval_output(self, manifest: OutputManifest) -> bool:
+        return True
+
+    async def _judge(self, episode: Episode) -> bool:      
+        test_returncode = episode.turns[-1].eval_output_manifest.debug_info.commands[0].returncode
+        current_report_path = episode.turns[-1].eval_output_path / "test_report.json"
+        if test_returncode >= 2 or not current_report_path.exists():
+            return False
+
+        settings = get_settings()
+        cache_dir = Path(settings.dataset.cache_dir)
+        target_report_path = cache_dir / "processed" / episode.task_id / "target" / "test_report.json"
+        diff = generate_nonpassed_dir(
+            current_report = current_report_path, 
+            target_report = target_report_path,
+            output_root = episode.turns[-1].turn_dir,
+            )
+        return diff == 0

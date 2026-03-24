@@ -56,7 +56,7 @@ class BaseDataset(ABC):
     @abstractmethod
     def _prepare_prop_input(self, episode: Episode) -> InputManifest:
         """子类实现：写入输入文件，返回 InputManifest。"""
-        ...
+        pass
 
     def prepare_prop_input(self, episode: Episode) -> None:
         """模板方法：调用子类 _prepare_prop_input，保存 manifest，设置 turn。"""
@@ -68,7 +68,7 @@ class BaseDataset(ABC):
     @abstractmethod
     def _prepare_exec_input(self, episode: Episode) -> InputManifest:
         """子类实现：写入输入文件，返回 InputManifest。"""
-        ...
+        pass
 
     def prepare_exec_input(self, episode: Episode) -> None:
         """模板方法：调用子类 _prepare_exec_input，保存 manifest，设置 turn。"""
@@ -80,7 +80,7 @@ class BaseDataset(ABC):
     @abstractmethod
     def _prepare_eval_input(self, episode: Episode) -> InputManifest:
         """子类实现：从 turn.exec_output_manifest 读取响应，写入执行文件，返回 InputManifest。"""
-        ...
+        pass
 
     def prepare_eval_input(self, episode: Episode) -> None:
         """模板方法：调用子类 _prepare_eval_input，保存 manifest，设置 turn。"""
@@ -90,28 +90,32 @@ class BaseDataset(ABC):
         turn.eval_input_manifest = manifest
 
     @abstractmethod
-    async def _judge(self, episode: Episode) -> None:
+    async def _judge(self, episode: Episode) -> bool:
         """子类实现：从 turn.eval_output_manifest 读取观测，判定是否通过，更新 turn.passed。"""
         pass
 
     async def make_judgement(self, episode: Episode) -> None:
         """判定 + 保存 meta，标记 turn 完成。"""
-        await self._judge(episode)
-        episode.turns[-1].save_meta()
+        last_turn = episode.turns[-1]
+        last_turn.passed = await self._judge(episode)
+        last_turn.save_meta()
 
     # ── Retry 验收接口 ──
-
-    def validate_prop_output(self, episode: Episode, manifest: OutputManifest) -> bool:
+    
+    @abstractmethod
+    def validate_prop_output(self, manifest: OutputManifest) -> bool:
         """验收 Proposer 输出，返回 True 表示通过。"""
-        return False
+        pass
 
-    def validate_exec_output(self, episode: Episode, manifest: OutputManifest) -> bool:
+    @abstractmethod
+    def validate_exec_output(self, manifest: OutputManifest) -> bool:
         """验收 Executor 输出，返回 True 表示通过。"""
-        return False
+        pass
 
-    def validate_eval_output(self, episode: Episode, manifest: OutputManifest) -> bool:
+    @abstractmethod
+    def validate_eval_output(self, manifest: OutputManifest) -> bool:
         """验收 Evaluator 输出，返回 True 表示通过。"""
-        return False
+        pass
 
 
 __all__ = [

@@ -5,7 +5,7 @@ import json
 from otter.dataset.base import BaseDataset
 from otter.dataset.utils import extract_code, build_messages
 from otter.config.setting import get_settings
-from otter.episode import Episode, InputManifest
+from otter.episode import Episode, InputManifest, OutputManifest
 from otter.backend.docker import DockerBackend
 from otter.logger import get_logger
 
@@ -117,10 +117,20 @@ class MBPPPlusDataset(BaseDataset):
             "copy_in": [(str(script_file), "/tmp")],
         })
 
-    async def _judge(self, episode: Episode) -> None:
+    async def _judge(self, episode: Episode) -> bool:
         turn = episode.turns[-1]
         eval_result = turn.eval_output_manifest.debug_info.commands[0]
-        turn.passed = eval_result.returncode == 0 and not eval_result.timed_out
+        return eval_result.returncode == 0 and not eval_result.timed_out
+
+    def validate_prop_output(self, manifest: OutputManifest) -> bool:
+        return True
+    
+    def validate_exec_output(self, manifest: OutputManifest) -> bool:
+        return True
+
+    def validate_eval_output(self, manifest: OutputManifest) -> bool:
+        return True
+
 
 __all__ = [
     "MBPPPlusDataset",

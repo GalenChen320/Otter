@@ -6,6 +6,7 @@ import zipfile
 import subprocess
 from pathlib import Path
 from huggingface_hub import hf_hub_download, snapshot_download
+from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 
 from otter.episode import Episode
@@ -127,6 +128,24 @@ def remove_pattern_files(
                 shutil.rmtree(item)
 
 
+def load_prompt(
+        template_path: str | Path,
+        template_args: dict | None
+        ) -> str:
+    template_path = Path(template_path)
+    if not template_path.is_file():
+        raise FileNotFoundError(f"File not found: {template_path}")
+    env = Environment(
+        loader=FileSystemLoader(str(template_path.parent)),
+        undefined=StrictUndefined, 
+        autoescape=False,
+        keep_trailing_newline=True,
+    )
+    template = env.get_template(template_path.name)
+    prompt = template.render(**(template_args or {}))
+    return prompt
+
+
 __all__ = [
     "build_messages",
     "extract_code",
@@ -136,4 +155,5 @@ __all__ = [
     "unzip",
     "checkout",
     "remove_pattern_files",
+    "load_prompt",
 ]

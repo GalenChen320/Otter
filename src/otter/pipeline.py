@@ -88,11 +88,11 @@ async def run_turn(
                 logger.info("[%s] turn %d proposing (attempt %d/%d)...",
                             ep.eid, ep.total_turns, attempt, settings.proposer_retry)
                 manifest = await prop_client.run(ep)
-            if ds.validate_prop_output(ep, manifest):
+            if ds.validate_prop_output(manifest):
                 break
             logger.warning("[%s] turn %d proposer output rejected (attempt %d/%d)",
                            ep.eid, ep.total_turns, attempt, settings.proposer_retry)
-            ep.archive_last_output("attempt_{attempt}")
+            ep.archive_last_output(f"attempt_{attempt}")
         else:
             raise RuntimeError(f"[{ep.eid}] proposer failed after {settings.proposer_retry} attempts")
 
@@ -104,11 +104,11 @@ async def run_turn(
                 logger.info("[%s] turn %d executing (attempt %d/%d)...",
                             ep.eid, ep.total_turns, attempt, settings.executor_retry)
                 manifest = await exec_client.run(ep)
-            if ds.validate_exec_output(ep, manifest):
+            if ds.validate_exec_output(manifest):
                 break
             logger.warning("[%s] turn %d executor output rejected (attempt %d/%d)",
                            ep.eid, ep.total_turns, attempt, settings.executor_retry)
-            ep.archive_last_output("attempt_{attempt}")
+            ep.archive_last_output(f"attempt_{attempt}")
         else:
             raise RuntimeError(f"[{ep.eid}] executor failed after {settings.executor_retry} attempts")
 
@@ -120,11 +120,11 @@ async def run_turn(
                 logger.info("[%s] turn %d evaluating (attempt %d/%d)...",
                             ep.eid, ep.total_turns, attempt, settings.evaluator_retry)
                 manifest = await eval_client.run(ep)
-            if ds.validate_eval_output(ep, manifest):
+            if ds.validate_eval_output(manifest):
                 break
             logger.warning("[%s] turn %d evaluator output rejected (attempt %d/%d)",
                            ep.eid, ep.total_turns, attempt, settings.evaluator_retry)
-            ep.archive_last_output("attempt_{attempt}")
+            ep.archive_last_output(f"attempt_{attempt}")
         else:
             raise RuntimeError(f"[{ep.eid}] evaluator failed after {settings.evaluator_retry} attempts")
 
