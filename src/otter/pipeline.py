@@ -72,7 +72,7 @@ async def run_turn(
     exec_semaphore: asyncio.Semaphore | None = None,
     eval_semaphore: asyncio.Semaphore | None = None,
 ) -> None:
-    """执行单轮：创建 Turn → [propose] → [generate] → [execute] → judge。"""
+    """执行单轮：创建 Turn → [propose] → [generate] → [execute] → conclude。"""
     logger = get_logger()
     settings = get_settings()
 
@@ -128,8 +128,8 @@ async def run_turn(
         else:
             raise RuntimeError(f"[{ep.eid}] evaluator failed after {settings.evaluator_retry} attempts")
 
-    # Step 5: make judgement
-    await ds.make_judgement(ep)
+    # Step 5: make conclusion
+    await ds.make_conclusion(ep)
     logger.info("[%s] turn %d completed (passed=%s)",
                 ep.eid, ep.total_turns, ep.turns[-1].passed)
 

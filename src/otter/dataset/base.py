@@ -90,15 +90,16 @@ class BaseDataset(ABC):
         turn.eval_input_manifest = manifest
 
     @abstractmethod
-    async def _judge(self, episode: Episode) -> bool:
+    async def _conclude(self, episode: Episode) -> dict:
         """子类实现：从 turn.eval_output_manifest 读取观测，判定是否通过，更新 turn.passed。"""
         pass
 
-    async def make_judgement(self, episode: Episode) -> None:
+    async def make_conclusion(self, episode: Episode) -> None:
         """判定 + 保存 meta，标记 turn 完成。"""
         last_turn = episode.turns[-1]
-        last_turn.passed = await self._judge(episode)
-        last_turn.save_meta()
+        conclusion = await self._conclude(episode)
+        last_turn.passed = conclusion["passed"]
+        last_turn.save_conclusion(conclusion)
 
     # ── Retry 验收接口 ──
     

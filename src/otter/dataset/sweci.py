@@ -312,6 +312,20 @@ class SWECIDataset(BaseDataset):
                 extra_params={"buildargs": {"BASE_IMAGE": base_image_tag}},
             )
             self._task_images[episode.task_id] = (base_image_tag, agent_image_tag)
+
+            task_dir = Path(settings.dataset.cache_dir) / "processed" / episode.task_id
+            current = json.loads((task_dir / "current" / "test_report.json").read_text(encoding="utf-8"))
+            target = json.loads((task_dir / "target" / "test_report.json").read_text(encoding="utf-8"))
+            current_passed_ids = set([t['nodeid'] for t in current['tests'] if t['outcome'] == 'passed'])
+            target_passed_ids = set([t['nodeid'] for t in target['tests'] if t['outcome'] == 'passed'])
+            episode.meta = {
+                "base_passed": len(current_passed_ids),
+                "target_passed": len(target_passed_ids),
+                }
+            (episode.base_dir / "meta.json").write_text(
+                json.dumps(episode.meta, ensure_ascii=False, indent=4), encoding="utf-8"
+                )
+
             logger.info("episode image ready: %s", agent_image_tag)
 
     async def teardown_episode(self, episode: Episode) -> None:
@@ -431,11 +445,11 @@ class SWECIDataset(BaseDataset):
     def validate_eval_output(self, manifest: OutputManifest) -> bool:
         return True
 
-    async def _judge(self, episode: Episode) -> bool:      
+    async def _conclude(self, episode: Episode) -> dict:      
         test_returncode = episode.turns[-1].eval_output_manifest.debug_info.commands[0].returncode
         current_report_path = episode.turns[-1].eval_output_path / "test_report.json"
         if test_returncode >= 2 or not current_report_path.exists():
-            return False
+            return {"passed": False, "collapse": True, "gap": -1}
 
         settings = get_settings()
         cache_dir = Path(settings.dataset.cache_dir)
@@ -445,4 +459,4 @@ class SWECIDataset(BaseDataset):
             target_report = target_report_path,
             output_root = episode.turns[-1].turn_dir,
             )
-        return diff == 0
+        return {"passed": diff == 0, "collapse": False, "gap": diff}

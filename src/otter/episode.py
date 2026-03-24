@@ -7,7 +7,7 @@ from otter.config.setting import get_settings
 from otter.manifest import InputManifest, OutputManifest
 
 
-META_FILENAME = "meta.json"
+CONCLUSION_FILENAME = "conclusion.json"
 EXPERIMENT_META = "experiment.json"
 
 
@@ -72,11 +72,9 @@ class Turn:
             output_dir.rename(archive_dir)
             output_dir.mkdir(exist_ok=True)
 
-    def save_meta(self) -> None:
-        """写入 meta.json，标记 turn 完成。"""
-        meta = {"passed": self.passed}
-        (self.turn_dir / META_FILENAME).write_text(
-            json.dumps(meta, ensure_ascii=False), encoding="utf-8",
+    def save_conclusion(self, conclusion: dict) -> None:
+        (self.turn_dir / CONCLUSION_FILENAME).write_text(
+            json.dumps(conclusion, ensure_ascii=False), encoding="utf-8",
         )
 
 
@@ -85,6 +83,7 @@ class Episode:
     task_id: str
     sample_id: int
     turns: list[Turn] = field(default_factory=list)
+    meta: dict | None = None
     base_dir: Path | None = None
 
     @staticmethod
@@ -155,8 +154,8 @@ class Episode:
 
             turns: list[Turn] = []
             for turn_dir in turn_dirs:
-                meta_path = turn_dir / META_FILENAME
-                if not meta_path.exists():
+                conclu_path = turn_dir / CONCLUSION_FILENAME
+                if not conclu_path.exists():
                     shutil.rmtree(turn_dir)
                     logger.info("cleaned incomplete turn: %s", turn_dir)
                     continue
@@ -168,11 +167,11 @@ class Episode:
                 eval_input_dir = turn_dir / "eval_input"
                 eval_output_dir = turn_dir / "eval_output"
 
-                meta = json.loads(meta_path.read_text(encoding="utf-8"))
+                conclu = json.loads(conclu_path.read_text(encoding="utf-8"))
 
                 turns.append(Turn(
                     turn_dir=turn_dir,
-                    passed=meta.get("passed"),
+                    passed=conclu.get("passed"),
                     prop_input_path=prop_input_dir if prop_input_dir.exists() else None,
                     prop_output_path=prop_output_dir if prop_output_dir.exists() else None,
                     exec_input_path=exec_input_dir if exec_input_dir.exists() else None,
@@ -187,10 +186,14 @@ class Episode:
                     eval_output_manifest=_load_manifest(eval_output_dir, OutputManifest),
                 ))
 
+            meta_path = ep_dir / "meta.json"
+            meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.is_file() else None
+
             episodes[eid] = Episode(
                 task_id=task_id,
                 sample_id=int(sample_id),
                 turns=turns,
+                meta=meta,
                 base_dir=ep_dir,
             )
 
