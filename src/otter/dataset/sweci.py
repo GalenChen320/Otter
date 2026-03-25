@@ -322,6 +322,7 @@ class SWECIDataset(BaseDataset):
                 "base_passed": len(current_passed_ids),
                 "target_passed": len(target_passed_ids),
                 }
+            episode.base_dir.mkdir(parents=True, exist_ok=True)
             (episode.base_dir / "meta.json").write_text(
                 json.dumps(episode.meta, ensure_ascii=False, indent=4), encoding="utf-8"
                 )

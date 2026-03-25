@@ -11,3 +11,5 @@ reports/
 .coverage
 .temp
 .sweci_cache
+*.log
+TODO
