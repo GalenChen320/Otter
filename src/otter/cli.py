@@ -56,14 +56,18 @@ def _resolve_experiment_dir(experiment_id: str | None) -> Path:
 
 @app.command()
 def summary(
-    experiment_id: Annotated[Optional[str], typer.Option("--exp", help="实验 ID")] = None,
+    env: Annotated[Path, typer.Option(help="环境变量文件路径")] = Path(".env"),
 ):
-    """查看评测结果摘要"""
-    from otter.summary import summarize, show_summary
+    """运行评测"""
+    if not env.exists():
+        typer.echo(f"Error: env file not found: {env}", err=True)
+        raise typer.Exit(1)
 
-    exp_dir = _resolve_experiment_dir(experiment_id)
-    result = summarize(exp_dir)
-    show_summary(result)
+    from otter.config.setting import init_settings
+    from otter.summary import summarize
+
+    init_settings(str(env))
+    summarize()
 
 
 @app.command()

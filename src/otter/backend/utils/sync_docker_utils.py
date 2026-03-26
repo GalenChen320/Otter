@@ -152,7 +152,8 @@ def sync_build_image(
 def sync_remove_image(
         image_tag: str, 
         *, 
-        missing_ok: bool = False
+        missing_ok: bool = False,
+        force: bool = False,
     ) -> None:
     """
     Remove a Docker image by its tag.
@@ -167,7 +168,7 @@ def sync_remove_image(
         docker.errors.APIError: If the image is currently in use by a container.
     """
     try:
-        _get_client().images.remove(image=image_tag, force=False)
+        _get_client().images.remove(image=image_tag, force=force)
     except docker.errors.ImageNotFound:
         if not missing_ok:
             raise ValueError(f"Image '{image_tag}' not found.")

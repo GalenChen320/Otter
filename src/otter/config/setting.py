@@ -44,11 +44,11 @@ class Settings(BaseSettings):
         description="Unique identifier for this experiment run"
     )
     max_turns: int = tracked_field(
-        default=1,
+        default=1, ge=1,
         description="Max feedback iterations per episode"
     )
     samples_per_problem: int = tracked_field(
-        default=1,
+        default=1, ge=1,
         description="Independent samples per problem"
     )
 
@@ -72,15 +72,15 @@ class Settings(BaseSettings):
 
     # ── Component concurrency ──
     proposer_concurrency: int = untracked_field(
-        default=1,
+        default=1, ge=1,
         description="Max concurrent proposer executions"
     )
     executor_concurrency: int = untracked_field(
-        default=1,
+        default=1, ge=1,
         description="Max concurrent executor executions"
     )
     evaluator_concurrency: int = untracked_field(
-        default=1,
+        default=1, ge=1,
         description="Max concurrent evaluator executions"
     )
 

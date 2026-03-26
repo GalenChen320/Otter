@@ -1,0 +1,41 @@
+# Dockerfile for Mini-SWE-Agent (https://github.com/SWE-agent/mini-swe-agent)
+# Usage:
+#   docker build \
+#     --build-arg BASE_IMAGE=ubuntu:22.04 \
+#     -t agent-mini-swe:latest \
+#     -f dockerfiles/Dockerfile.mini_swe .
+
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+ARG MINI_SWE_VERSION=latest
+ARG AGENT_HOME=/opt/agent
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        ca-certificates curl git \
+        python3 python3-pip python3-venv; \
+    rm -rf /var/lib/apt/lists/*
+
+# 安装 mini-swe-agent 到独立的 venv，避免污染系统 Python
+RUN set -eux; \
+    python3 -m venv "${AGENT_HOME}/venv"; \
+    "${AGENT_HOME}/venv/bin/pip" install --no-cache-dir --upgrade pip; \
+    if [ "${MINI_SWE_VERSION}" = "latest" ]; then \
+        "${AGENT_HOME}/venv/bin/pip" install --no-cache-dir mini-swe-agent; \
+    else \
+        "${AGENT_HOME}/venv/bin/pip" install --no-cache-dir "mini-swe-agent==${MINI_SWE_VERSION}"; \
+    fi; \
+    mkdir -p "${AGENT_HOME}/home" "${AGENT_HOME}/cache"; \
+    chmod -R 777 "${AGENT_HOME}"
+
+# 将 venv bin 加入 PATH，使 mini-swe-agent 和 mini 命令全局可用
+RUN printf '#!/bin/sh\nexec "%s/venv/bin/mini-swe-agent" "$@"\n' \
+        "${AGENT_HOME}" > /usr/local/bin/mini-swe-agent; \
+    chmod +x /usr/local/bin/mini-swe-agent; \
+    printf '#!/bin/sh\nexec "%s/venv/bin/mini" "$@"\n' \
+        "${AGENT_HOME}" > /usr/local/bin/mini; \
+    chmod +x /usr/local/bin/mini
+
+WORKDIR /app

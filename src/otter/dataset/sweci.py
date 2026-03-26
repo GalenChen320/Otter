@@ -274,7 +274,7 @@ class SWECIDataset(BaseDataset):
         for base_tag, agent_tag in self._task_images.values():
             for tag in (agent_tag, base_tag):
                 if tag not in cleaned:
-                    await DockerBackend.remove_image(tag, missing_ok=True)
+                    await DockerBackend.remove_image(tag, missing_ok=True, force=True)
                     cleaned.add(tag)
                     logger.info("removed image: %s", tag)
 

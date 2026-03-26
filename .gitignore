@@ -1,6 +1,4 @@
-/.env.local
 *.egg-info/ 
-data/
 __pycache__/
 /*.md
 !/README.md
@@ -13,3 +11,4 @@ reports/
 .sweci_cache
 *.log
 TODO
+envs_local/

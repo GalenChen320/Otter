@@ -99,9 +99,9 @@ class DockerBackend:
         return image_tag
 
     @classmethod
-    async def remove_image(cls, image_tag: str, *, missing_ok: bool = True) -> None:
+    async def remove_image(cls, image_tag: str, *, missing_ok: bool = True, force=False) -> None:
         """删除镜像。"""
-        await remove_image(image_tag, missing_ok=missing_ok)
+        await remove_image(image_tag, missing_ok=missing_ok, force=force)
 
     async def run(self, manifest, output_dir: Path) -> OutputManifest:
         """直接将 manifest.params 透传给 _run。"""
@@ -219,7 +219,7 @@ class DockerBackend:
 
         except Exception as e:
             logger.error("container execution failed: %s", e)
-            OutputManifest(
+            return OutputManifest(
                 backend_type=self.backend_type,
                 products=products, 
                 debug_info=debug, 

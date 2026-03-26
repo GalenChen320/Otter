@@ -7,7 +7,7 @@
             "request": "launch",
             "envFile": "",
             "program": "${workspaceFolder}/src/otter/cli.py",
-            "args": ["run", "--env", ".env.local"],
+            "args": ["summary", "--env", "envs_local/sweci_oc_glm5"],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
         }
