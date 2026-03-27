@@ -171,7 +171,7 @@ class Episode:
 
                 turns.append(Turn(
                     turn_dir=turn_dir,
-                    passed=conclu.get("passed"),
+                    passed=conclu.get("is_solved"),
                     prop_input_path=prop_input_dir if prop_input_dir.exists() else None,
                     prop_output_path=prop_output_dir if prop_output_dir.exists() else None,
                     exec_input_path=exec_input_dir if exec_input_dir.exists() else None,

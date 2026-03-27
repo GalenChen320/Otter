@@ -110,11 +110,11 @@ class EvalPlusDataset(BaseDataset):
             "copy_in": [(str(script_file), "/tmp")],
         })
 
-    async def _conclude(self, episode: Episode) -> bool:
+    async def _conclude(self, episode: Episode) -> dict:
         turn = episode.turns[-1]
         eval_result = turn.eval_output_manifest.debug_info.commands[0]
         passed = eval_result.returncode == 0 and not eval_result.timed_out
-        return {"passed": passed}
+        return {"is_solved": passed}
 
     def validate_prop_output(self, manifest: OutputManifest) -> bool:
         return True

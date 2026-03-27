@@ -54,17 +54,12 @@ def parse_results(results: dict, max_turns: int):
     assert max_turns > 0, "max_turns must be positive."
     n_turns = len(results["turns"])
 
-    pass_seq = [
-        0 if turn["collapse"]
-        else results["target_passed"] - turn["gap"]
-        for turn in results["turns"]
-    ]
-
-    coll_seq = [t["collapse"] for t in results["turns"]]
+    pass_seq = [t["num_passed"] for t in results["turns"]]
+    coll_seq = [t["is_collapsed"] for t in results["turns"]]
 
     if n_turns == 0:
         progress = 0
-    elif (n_turns == max_turns) or results["turns"][-1]["passed"]:
+    elif (n_turns == max_turns) or results["turns"][-1]["is_solved"]:
         progress = 1
     else:
         progress = n_turns / max_turns

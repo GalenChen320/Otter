@@ -443,7 +443,7 @@ class SWECIDataset(BaseDataset):
         test_returncode = episode.turns[-1].eval_output_manifest.debug_info.commands[0].returncode
         current_report_path = episode.turns[-1].eval_output_path / "test_report.json"
         if test_returncode >= 2 or not current_report_path.exists():
-            return {"passed": False, "collapse": True, "gap": -1}
+            return {"is_solved": False, "is_collapsed": True, "num_passed": 0}
 
         settings = get_settings()
         cache_dir = Path(settings.dataset.cache_dir)
@@ -453,4 +453,6 @@ class SWECIDataset(BaseDataset):
             target_report = target_report_path,
             output_root = episode.turns[-1].turn_dir,
             )
-        return {"passed": diff == 0, "collapse": False, "gap": diff}
+        current = json.loads(current_report_path.read_text(encoding="utf-8"))
+        num_passed = len(set([t['nodeid'] for t in current['tests'] if t['outcome'] == 'passed']))
+        return {"is_solved": diff == 0, "is_collapsed": False, "num_passed": num_passed}

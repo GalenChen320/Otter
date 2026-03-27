@@ -98,7 +98,7 @@ class BaseDataset(ABC):
         """判定 + 保存 meta，标记 turn 完成。"""
         last_turn = episode.turns[-1]
         conclusion = await self._conclude(episode)
-        last_turn.passed = conclusion["passed"]
+        last_turn.passed = conclusion["is_solved"]
         last_turn.save_conclusion(conclusion)
 
     # ── Retry 验收接口 ──
