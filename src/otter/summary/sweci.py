@@ -87,6 +87,8 @@ def parse_results(results: dict, max_turns: int):
             amplitude = (prev_pass - pass_seq[idx]) / prev_pass if prev_pass != 0 else 0
             regress_amplitudes.append(amplitude) 
 
+    pass_seq = [min(max(0, p), results["target_passed"]) for p in pass_seq]
+
     rela_changes = []
     for n_pass in pass_seq:
         if n_pass >= results["base_passed"]:
@@ -96,7 +98,7 @@ def parse_results(results: dict, max_turns: int):
             else:
                 rc = 0
         else:
-            rc = - n_pass / results["base_passed"] if results["base_passed"] else 0
+            rc = (n_pass - results["base_passed"]) / results["base_passed"] if results["base_passed"] else -1.0
         rela_changes.append(rc)
     
     if rela_changes:

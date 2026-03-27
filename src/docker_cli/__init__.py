@@ -16,7 +16,7 @@ AGENT_REGISTRY: dict[str, tuple[type[BaseAgentDriver], type]] = {
     "codex":     (CodexDriver, CodexConfig),
     "opencode":  (OpenCodeDriver, OpenCodeConfig),
     "openhands": (OpenHandsDriver, OpenHandsConfig),
-    "miniswe": (MiniSWEConfig, MiniSWEDriver)
+    "miniswe": (MiniSWEDriver, MiniSWEConfig),
 }
 
 # agent_name → Dockerfile 路径

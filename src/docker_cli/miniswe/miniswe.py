@@ -51,9 +51,9 @@ class MiniSWEConfig(BaseModel):
     model_name: str
     base_url: str = ""
     protocol: str = "openai"
-    cost_limit: str = "12.00"
-    step_limit: int = 100
-    timeout: int = 30
+    cost_limit: str = "100000"
+    step_limit: int = 1000000
+    timeout: int = 1000000
 
 
 class MiniSWEDriver(BaseAgentDriver):
