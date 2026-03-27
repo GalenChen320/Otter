@@ -118,6 +118,7 @@ def parse_results(results: dict, max_turns: int):
         "relative_changes": rela_changes,
         "max_rc_sofar":max_rc_sofar,
 
+        "zero_regress": num_regress == 0,
         "num_regress": num_regress,
         "regress_count": regress_time,
         "regress_amplitudes": regress_amplitudes,
@@ -144,6 +145,7 @@ def average_result(results_list:list[dict]) -> dict:
         "n_turns": sum(r["n_turns"] for r in lst) / lens,
         "progress": sum(r["progress"] for r in lst) / lens,
         "solved": sum(int(r["solved"]) for r in lst) / lens,
+        "zero_regress": sum(int(r["zero_regress"]) for r in lst) / lens,
 
         "relative_changes": _list_avg([r["relative_changes"] for r in results_list]),
         "max_rc_sofar": _list_avg([r["max_rc_sofar"] for r in results_list]),
@@ -234,6 +236,7 @@ def show_sweci_summary():
     stat = {
         "n_turns": avg["n_turns"],
         "solved": avg["solved"],
+        "zero_regress": avg["zero_regress"],
         "evoscore_0.8": avg["evoscore_0.8"],
         "evoscore_0.9": avg["evoscore_0.9"],
         "evoscore_1.0": avg["evoscore_1.0"],
