@@ -30,8 +30,7 @@ class OpenCodeConfig(BaseModel):
     base_url: str = ""
 
     # ── Docker 镜像构建配置 ──
-    base_image: str = "ubuntu:22.04"
-    node_version: str = "22.11.0"
+    node_version: str = "22.18.0"
     agent_npm_pkg: str = "opencode-ai"
     agent_bin: str = "opencode"
     agent_home: str = "/opt/agent"
