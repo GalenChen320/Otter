@@ -7,10 +7,7 @@ from huggingface_hub import HfApi
 from huggingface_hub.utils import disable_progress_bars
 
 from docker_cli.base import BaseAgentDriver
-from docker_cli.claude.claude import ClaudeConfig, ClaudeDriver
-from docker_cli.codex.codex import CodexConfig, CodexDriver
-from docker_cli.opencode.opencode import OpenCodeConfig, OpenCodeDriver
-from docker_cli.openhands.openhands import OpenHandsConfig, OpenHandsDriver
+from docker_cli import AGENT_REGISTRY, AGENT_DOCKERFILE_MAP
 
 from otter.logger import get_logger
 from otter.dataset.base import BaseDataset
@@ -22,22 +19,6 @@ from otter.dataset.utils import (
     unzip, checkout, remove_pattern_files, load_prompt
 )
 
-
-# agent_name → (DriverClass, ConfigClass)
-AGENT_REGISTRY: dict[str, tuple[type[BaseAgentDriver], type]] = {
-    "claude":   (ClaudeDriver, ClaudeConfig),
-    "codex":    (CodexDriver, CodexConfig),
-    "opencode": (OpenCodeDriver, OpenCodeConfig),
-    "openhands": (OpenHandsDriver, OpenHandsConfig),
-}
-
-# agent name → Dockerfile 路径（相对于项目根目录）
-AGENT_DOCKERFILE_MAP: dict[str, Path] = {
-    "claude":   Path(__file__).resolve().parents[2] / "docker_cli" / "claude" / "Dockerfile.claude",
-    "codex":    Path(__file__).resolve().parents[2] / "docker_cli" / "codex" / "Dockerfile.codex",
-    "opencode": Path(__file__).resolve().parents[2] / "docker_cli" / "opencode" / "Dockerfile.opencode",
-    "openhands": Path(__file__).resolve().parents[2] / "docker_cli" / "openhands" / "Dockerfile.openhands",
-}
 
 def safe_name(node_id: str) -> str:
     safe_name = "".join(c if c.isalnum() or c == '.' else '_' for c in node_id)
