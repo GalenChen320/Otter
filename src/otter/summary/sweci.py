@@ -53,7 +53,13 @@ def load_episode_result(ep_dir: Path):
 def parse_results(results: dict, max_turns: int):
     assert max_turns > 0, "max_turns must be positive."
     n_turns = len(results["turns"])
-    pass_seq = [results["target_passed"] - t["gap"] for t in results["turns"]]
+
+    pass_seq = [
+        0 if turn["collapse"]
+        else results["target_passed"] - turn["gap"]
+        for turn in results["turns"]
+    ]
+
     coll_seq = [t["collapse"] for t in results["turns"]]
 
     if n_turns == 0:
