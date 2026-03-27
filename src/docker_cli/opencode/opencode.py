@@ -21,16 +21,6 @@ _HOME_DIR = "/opt/agent/home"
 _AUTH_JSON_PATH = f"{_HOME_DIR}/.local/share/opencode/auth.json"
 _CONFIG_JSON_PATH = f"{_HOME_DIR}/.config/opencode/opencode.json"
 
-# 与 reference/opencode/prompt_extra.txt 保持一致，
-# 在用户 prompt 前拼接，引导 opencode 直接执行任务而不询问
-_PROMPT_EXTRA = """\
-## 整体要求
-- 准确理解下面的用户需求，如需要执行相关操作或调用相关工具，比如创建文件、修改文件、运行命令等，直接执行即可，不要提示，也不要询问
-
-## 用户需求如下
-"""
-_PROMPT_EXTRA = ""
-
 class OpenCodeConfig(BaseModel):
     """OpenCode 智能体配置。"""
 
@@ -109,14 +99,13 @@ class OpenCodeDriver(BaseAgentDriver):
         """
         cfg = self.cfg
         model_spec = f"custom/{cfg.model_name}"
-        full_prompt = _PROMPT_EXTRA + prompt
 
         env = {
             "HOME": _HOME_DIR,
             "DISABLE_SEND_PV": "1",
         }
 
-        cmd = f"opencode run --model {model_spec} {shlex.quote(full_prompt)}"
+        cmd = f"opencode run --model {model_spec} {shlex.quote(prompt)}"
 
         return cmd, {"workdir": work_dir, "environment": env}
 
