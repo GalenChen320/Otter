@@ -226,8 +226,9 @@ def show_sweci_summary():
         "num_sample": num_sample,
     }
 
+    progress = avg["progress"]
+
     stat = {
-        "progress": avg["progress"],
         "n_turns": avg["n_turns"],
         "solved": avg["solved"],
         "evoscore_0.8": avg["evoscore_0.8"],
@@ -245,6 +246,11 @@ def show_sweci_summary():
     }
 
     console = Console()
+
+    # Progress 进度（单独醒目展示）
+    console.print()
+    console.print(f"  [bold]Experiment progress:[/bold] [bold yellow]{progress:.2%}[/bold yellow]")
+    console.print()
 
     # Meta 信息
     meta_text = Text()
@@ -270,7 +276,7 @@ def show_sweci_summary():
 
     for i in range(max_turns):
         table.add_row(
-            str(i),
+            str(i + 1),
             f"{turn_stat['regress_rate'][i]:.4f}",
             f"{turn_stat['regress_amplitude'][i]:.4f}",
             f"{turn_stat['relative_changes'][i]:.4f}",
