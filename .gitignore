@@ -12,3 +12,4 @@ reports/
 *.log
 TODO
 envs_local/
+.vscode
