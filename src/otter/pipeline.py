@@ -130,8 +130,8 @@ async def run_turn(
 
     # Step 5: make conclusion
     await ds.make_conclusion(ep)
-    logger.info("[%s] turn %d completed (passed=%s)",
-                ep.eid, ep.total_turns, ep.turns[-1].passed)
+    logger.info("[%s] turn %d completed (is_solved=%s)",
+                ep.eid, ep.total_turns, ep.turns[-1].is_solved)
 
 
 async def run(

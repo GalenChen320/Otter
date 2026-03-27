@@ -11,7 +11,7 @@ def _load_episodes(experiment_dir: Path) -> list[dict]:
     episodes = []
     for eid in sorted(synced):
         ep = synced[eid]
-        turns = [t.passed for t in ep.turns]
+        turns = [t.is_solved for t in ep.turns]
         if turns:
             episodes.append({
                 "task_id": ep.task_id,

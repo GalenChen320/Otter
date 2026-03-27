@@ -14,7 +14,7 @@ EXPERIMENT_META = "experiment.json"
 @dataclass
 class Turn:
     turn_dir: Path
-    passed: bool | None = None
+    is_solved: bool | None = None
     prop_input_path: Path | None = None
     prop_output_path: Path | None = None
     exec_input_path: Path | None = None
@@ -96,7 +96,7 @@ class Episode:
 
     @property
     def resolved(self) -> bool:
-        return len(self.turns) > 0 and self.turns[-1].passed is True
+        return len(self.turns) > 0 and self.turns[-1].is_solved is True
 
     @property
     def total_turns(self) -> int:
@@ -171,7 +171,7 @@ class Episode:
 
                 turns.append(Turn(
                     turn_dir=turn_dir,
-                    passed=conclu.get("is_solved"),
+                    is_solved=conclu.get("is_solved"),
                     prop_input_path=prop_input_dir if prop_input_dir.exists() else None,
                     prop_output_path=prop_output_dir if prop_output_dir.exists() else None,
                     exec_input_path=exec_input_dir if exec_input_dir.exists() else None,

@@ -91,14 +91,14 @@ class BaseDataset(ABC):
 
     @abstractmethod
     async def _conclude(self, episode: Episode) -> dict:
-        """子类实现：从 turn.eval_output_manifest 读取观测，判定是否通过，更新 turn.passed。"""
+        """子类实现：从 turn.eval_output_manifest 读取观测，判定是否通过，更新 turn.is_solved。"""
         pass
 
     async def make_conclusion(self, episode: Episode) -> None:
         """判定 + 保存 meta，标记 turn 完成。"""
         last_turn = episode.turns[-1]
         conclusion = await self._conclude(episode)
-        last_turn.passed = conclusion["is_solved"]
+        last_turn.is_solved = conclusion["is_solved"]
         last_turn.save_conclusion(conclusion)
 
     # ── Retry 验收接口 ──
