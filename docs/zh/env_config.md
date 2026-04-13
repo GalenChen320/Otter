@@ -97,9 +97,9 @@ EXECUTOR__retry_base_delay=1.0
 ```env
 EVALUATOR_TYPE=docker
 EVALUATOR__cpus=1.0
-EVALUATOR__memory=512m
+EVALUATOR__memory=4096m
 EVALUATOR__timeout=10
-EVALUATOR__network_mode=none
+EVALUATOR__network_mode=host
 ```
 
 ---
@@ -163,10 +163,10 @@ EXECUTOR__retry_base_delay=1.0
 
 # ── Evaluator (docker) ──
 EVALUATOR__cpus=1.0
-EVALUATOR__memory=512m
-EVALUATOR__memory_swap=512m
-EVALUATOR__memory_reservation=256m
-EVALUATOR__network_mode=none
+EVALUATOR__memory=4096m
+EVALUATOR__memory_swap=4096m
+EVALUATOR__memory_reservation=2048m
+EVALUATOR__network_mode=host
 EVALUATOR__device_read_bps=128m
 EVALUATOR__device_write_bps=128m
 EVALUATOR__timeout=10
