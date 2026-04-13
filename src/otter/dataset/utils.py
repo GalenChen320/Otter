@@ -135,10 +135,12 @@ def load_prompt(
     template_path = Path(template_path)
     if not template_path.is_file():
         raise FileNotFoundError(f"File not found: {template_path}")
+    # autoescape=False is intentional: templates are used as LLM prompts (not HTML),
+    # so escaping < > & would corrupt the prompt content.
     env = Environment(
         loader=FileSystemLoader(str(template_path.parent)),
-        undefined=StrictUndefined, 
-        autoescape=False,
+        undefined=StrictUndefined,
+        autoescape=False,  # nosec B701
         keep_trailing_newline=True,
     )
     template = env.get_template(template_path.name)
