@@ -120,6 +120,17 @@ Dataset parameters use the `DATASET__` prefix. The available fields depend on th
 |---------|------|---------|---------|-------------|
 | `DATASET__cache_dir` | Path | `data/cache` | untracked | Local cache directory for HuggingFace datasets |
 
+### sweci (SWE-CI)
+
+| Variable | Type | Default | Tracked | Description |
+|---------|------|---------|---------|-------------|
+| `DATASET__splitting` | str | `"default"` | tracked | Dataset splitting to use (e.g., `default`, `mini`) |
+| `DATASET__agent_name` | str | `"opencode"` | tracked | AI CLI agent to use (`claude`, `codex`, `opencode`, `openhands`) |
+| `DATASET__agent_api_key` | str | `""` | untracked | API key for the AI CLI agent |
+| `DATASET__agent_model_name` | str | `""` | tracked | Model name for the AI CLI agent |
+| `DATASET__agent_base_url` | str | `""` | tracked | Base URL for the AI CLI agent API |
+| `DATASET__cache_dir` | Path | `data/cache` | untracked | Local cache directory for HuggingFace datasets |
+
 ---
 
 ## Logger Parameters
