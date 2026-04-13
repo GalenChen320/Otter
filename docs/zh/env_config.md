@@ -120,6 +120,17 @@ EVALUATOR__network_mode=none
 |---------|------|--------|---------|------|
 | `DATASET__cache_dir` | Path | `data/cache` | untracked | HuggingFace 数据集的本地缓存目录 |
 
+### sweci（SWE-CI）
+
+| 环境变量 | 类型 | 默认值 | tracked | 说明 |
+|---------|------|--------|---------|------|
+| `DATASET__splitting` | str | `"default"` | tracked | 使用的数据集划分（如 `default`、`mini`） |
+| `DATASET__agent_name` | str | `"opencode"` | tracked | AI CLI 智能体（`claude`、`codex`、`opencode`、`openhands`） |
+| `DATASET__agent_api_key` | str | `""` | untracked | AI CLI 智能体的 API Key |
+| `DATASET__agent_model_name` | str | `""` | tracked | AI CLI 智能体使用的模型名称 |
+| `DATASET__agent_base_url` | str | `""` | tracked | AI CLI 智能体的 API 基础 URL |
+| `DATASET__cache_dir` | Path | `data/cache` | untracked | HuggingFace 数据集的本地缓存目录 |
+
 ---
 
 ## 日志参数
