@@ -82,10 +82,10 @@ EXECUTOR__retry_base_delay=1.0
 | 环境变量 | 类型 | 默认值 | 必填 | tracked | 说明 |
 |---------|------|--------|------|---------|------|
 | `{ROLE}__cpus` | float \| None | `1.0` | 否 | tracked | 每个容器分配的 CPU 核心数 |
-| `{ROLE}__memory` | str \| None | `"512m"` | 否 | tracked | 容器内存限制（如 `512m`、`1g`） |
-| `{ROLE}__memory_swap` | str \| None | `"512m"` | 否 | tracked | 容器交换内存限制 |
-| `{ROLE}__memory_reservation` | str \| None | `"256m"` | 否 | tracked | 容器软内存限制 |
-| `{ROLE}__network_mode` | str \| None | `"none"` | 否 | tracked | 容器网络模式（`none` 表示禁用网络） |
+| `{ROLE}__memory` | str \| None | `"4096m"` | 否 | tracked | 容器内存限制（如 `512m`、`1g`） |
+| `{ROLE}__memory_swap` | str \| None | `"4096m"` | 否 | tracked | 容器交换内存限制 |
+| `{ROLE}__memory_reservation` | str \| None | `"2048m"` | 否 | tracked | 容器软内存限制 |
+| `{ROLE}__network_mode` | str \| None | `"host"` | 否 | tracked | 容器网络模式（`none` 表示禁用网络） |
 | `{ROLE}__device_read_bps` | str \| None | `"128m"` | 否 | tracked | 磁盘读取速率限制 |
 | `{ROLE}__device_write_bps` | str \| None | `"128m"` | 否 | tracked | 磁盘写入速率限制 |
 | `{ROLE}__timeout` | int | `10` | 否 | tracked | 单条命令执行超时（秒） |

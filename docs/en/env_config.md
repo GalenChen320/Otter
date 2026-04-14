@@ -82,10 +82,10 @@ For executing code inside Docker containers.
 | Variable | Type | Default | Required | Tracked | Description |
 |---------|------|---------|----------|---------|-------------|
 | `{ROLE}__cpus` | float \| None | `1.0` | No | tracked | CPU cores allocated per container |
-| `{ROLE}__memory` | str \| None | `"512m"` | No | tracked | Container memory limit (e.g., `512m`, `1g`) |
-| `{ROLE}__memory_swap` | str \| None | `"512m"` | No | tracked | Container swap memory limit |
-| `{ROLE}__memory_reservation` | str \| None | `"256m"` | No | tracked | Container soft memory limit |
-| `{ROLE}__network_mode` | str \| None | `"none"` | No | tracked | Container network mode (`none` disables networking) |
+| `{ROLE}__memory` | str \| None | `"4096m"` | No | tracked | Container memory limit (e.g., `512m`, `1g`) |
+| `{ROLE}__memory_swap` | str \| None | `"4096m"` | No | tracked | Container swap memory limit |
+| `{ROLE}__memory_reservation` | str \| None | `"2048m"` | No | tracked | Container soft memory limit |
+| `{ROLE}__network_mode` | str \| None | `"host"` | No | tracked | Container network mode (`none` disables networking) |
 | `{ROLE}__device_read_bps` | str \| None | `"128m"` | No | tracked | Disk read rate limit |
 | `{ROLE}__device_write_bps` | str \| None | `"128m"` | No | tracked | Disk write rate limit |
 | `{ROLE}__timeout` | int | `10` | No | tracked | Per-command execution timeout in seconds |
