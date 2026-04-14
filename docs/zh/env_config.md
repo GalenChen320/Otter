@@ -27,6 +27,9 @@ Otter 的所有运行参数通过 `.env` 文件配置。运行时通过 `otter r
 | `PROPOSER_CONCURRENCY` | int | `1` | untracked | Proposer 最大并发数 |
 | `EXECUTOR_CONCURRENCY` | int | `1` | untracked | Executor 最大并发数 |
 | `EVALUATOR_CONCURRENCY` | int | `1` | untracked | Evaluator 最大并发数 |
+| `PROPOSER_RETRY` | int | `1` | untracked | Proposer 最大重试次数（≥1） |
+| `EXECUTOR_RETRY` | int | `1` | untracked | Executor 最大重试次数（≥1） |
+| `EVALUATOR_RETRY` | int | `1` | untracked | Evaluator 最大重试次数（≥1） |
 
 ---
 
@@ -59,8 +62,6 @@ Proposer、Executor、Evaluator 三个角色各自通过 `XXX_TYPE` 选择使用
 | `{ROLE}__api_key` | str | — | 是 | untracked | LLM 服务的 API Key |
 | `{ROLE}__base_url` | str | — | 是 | tracked | LLM API 的 Base URL |
 | `{ROLE}__model` | str | — | 是 | tracked | 使用的模型名称 |
-| `{ROLE}__max_retries` | int | `3` | 否 | tracked | API 调用失败时的最大重试次数（≥1） |
-| `{ROLE}__retry_base_delay` | float | `1.0` | 否 | tracked | 指数退避的基础延迟（秒） |
 
 其中 `{ROLE}` 根据实际绑定的角色替换为 `PROPOSER`、`EXECUTOR` 或 `EVALUATOR`。
 
@@ -71,8 +72,6 @@ EXECUTOR_TYPE=chat_llm
 EXECUTOR__api_key=sk-xxx
 EXECUTOR__base_url=https://api.deepseek.com
 EXECUTOR__model=deepseek-chat
-EXECUTOR__max_retries=3
-EXECUTOR__retry_base_delay=1.0
 ```
 
 ### docker
@@ -169,8 +168,6 @@ EVALUATOR_CONCURRENCY=10
 EXECUTOR__api_key=sk-your-api-key
 EXECUTOR__base_url=https://api.deepseek.com
 EXECUTOR__model=deepseek-chat
-EXECUTOR__max_retries=3
-EXECUTOR__retry_base_delay=1.0
 
 # ── Evaluator (docker) ──
 EVALUATOR__cpus=1.0

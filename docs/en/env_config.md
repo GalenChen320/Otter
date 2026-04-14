@@ -27,6 +27,9 @@ Top-level parameters are written directly in the `.env` file without any prefix.
 | `PROPOSER_CONCURRENCY` | int | `1` | untracked | Max concurrent Proposer executions |
 | `EXECUTOR_CONCURRENCY` | int | `1` | untracked | Max concurrent Executor executions |
 | `EVALUATOR_CONCURRENCY` | int | `1` | untracked | Max concurrent Evaluator executions |
+| `PROPOSER_RETRY` | int | `1` | untracked | Max retry attempts for Proposer (≥1) |
+| `EXECUTOR_RETRY` | int | `1` | untracked | Max retry attempts for Executor (≥1) |
+| `EVALUATOR_RETRY` | int | `1` | untracked | Max retry attempts for Evaluator (≥1) |
 
 ---
 
@@ -59,8 +62,6 @@ For calling OpenAI-compatible LLM APIs.
 | `{ROLE}__api_key` | str | — | Yes | untracked | API key for the LLM provider |
 | `{ROLE}__base_url` | str | — | Yes | tracked | Base URL of the LLM API endpoint |
 | `{ROLE}__model` | str | — | Yes | tracked | Model name to use for generation |
-| `{ROLE}__max_retries` | int | `3` | No | tracked | Max retry attempts on API failure (≥1) |
-| `{ROLE}__retry_base_delay` | float | `1.0` | No | tracked | Base delay in seconds for exponential backoff |
 
 Replace `{ROLE}` with `PROPOSER`, `EXECUTOR`, or `EVALUATOR` depending on which role uses this backend.
 
@@ -71,8 +72,6 @@ EXECUTOR_TYPE=chat_llm
 EXECUTOR__api_key=sk-xxx
 EXECUTOR__base_url=https://api.deepseek.com
 EXECUTOR__model=deepseek-chat
-EXECUTOR__max_retries=3
-EXECUTOR__retry_base_delay=1.0
 ```
 
 ### docker
@@ -169,8 +168,6 @@ EVALUATOR_CONCURRENCY=10
 EXECUTOR__api_key=sk-your-api-key
 EXECUTOR__base_url=https://api.deepseek.com
 EXECUTOR__model=deepseek-chat
-EXECUTOR__max_retries=3
-EXECUTOR__retry_base_delay=1.0
 
 # ── Evaluator (docker) ──
 EVALUATOR__cpus=1.0
