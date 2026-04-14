@@ -1,7 +1,6 @@
 """Tests for otter.summary module."""
 
 import json
-from pathlib import Path
 
 import pytest
 
@@ -10,7 +9,6 @@ from otter.summary import (
     TurnStats,
     SampleSummary,
     ExperimentSummary,
-    _load_episodes,
     _compute_turn_stats,
     summarize,
     show_summary,

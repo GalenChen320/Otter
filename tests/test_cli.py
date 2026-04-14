@@ -1,6 +1,5 @@
 """Tests for otter.cli module."""
 
-from pathlib import Path
 
 import pytest
 import typer
@@ -65,7 +64,7 @@ class TestRunCommand:
 
         mock_init_settings = mocker.patch("otter.config.setting.init_settings")
         mock_init_logger = mocker.patch("otter.logger.init_logger")
-        mock_main = mocker.patch("otter.pipeline.main")
+        mocker.patch("otter.pipeline.main")
         mock_asyncio_run = mocker.patch("otter.cli.asyncio.run")
 
         result = runner.invoke(app, ["run", "--env", str(env_file)])

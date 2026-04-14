@@ -1,10 +1,9 @@
 """Tests for otter.dataset.evalplus module."""
 
 import pytest
-from pathlib import Path
 
 from otter.dataset.evalplus import EvalPlusDataset, HumanEvalProblem
-from otter.episode import Episode, Turn, InputManifest, OutputManifest
+from otter.episode import Episode, Turn, OutputManifest
 
 
 class TestHumanEvalProblem:

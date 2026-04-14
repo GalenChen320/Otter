@@ -1,7 +1,5 @@
 """Tests for otter.backend.chat_llm module."""
 
-import pytest
-from pathlib import Path
 
 from otter.backend.chat_llm import ChatLLMBackend
 

@@ -12,7 +12,6 @@ from otter.config.setting import (
     init_settings,
     get_settings,
     get_tracked_config,
-    _settings,
 )
 from otter.config.backend_settings import ChatLLMSettings, DockerSettings
 from otter.config.dataset_settings import MbppplusSettings, EvalplusSettings

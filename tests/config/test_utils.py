@@ -1,6 +1,5 @@
 """Tests for otter.config.utils module."""
 
-import pytest
 from pydantic_core import PydanticUndefined
 
 from otter.config.utils import (
