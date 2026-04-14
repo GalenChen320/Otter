@@ -174,7 +174,7 @@ async def initialize_sweci():
             image_tag = await DockerBackend.load_image(data_dir / "image.tar.gz")
             loaded_images.add(image_tag)
             container_report = "/tmp/test_report.json"
-            current_result = await backend._run(
+            await backend._run(
                 image_tag,
                 commands=[
                     (
@@ -185,7 +185,7 @@ async def initialize_sweci():
                 copy_in=[(current_dir/"code", "/app")],
                 copy_out=[(container_report, current_dir)],
             )
-            target_result = await backend._run(
+            await backend._run(
                 image_tag,
                 commands=[
                     (
@@ -321,7 +321,6 @@ class SWECIDataset(BaseDataset):
 
     def _prepare_prop_input(self, episode: Episode) -> InputManifest:
         settings = get_settings()
-        logger = get_logger() 
 
         _, agent_image_tag = self._task_images[episode.task_id]
         setup_cmds = self._driver.build_setup_commands()
@@ -354,7 +353,6 @@ class SWECIDataset(BaseDataset):
 
     def _prepare_exec_input(self, episode: Episode) -> InputManifest:
         settings = get_settings()
-        logger = get_logger() 
 
         _, agent_image_tag = self._task_images[episode.task_id]
         setup_cmds = self._driver.build_setup_commands()
@@ -386,10 +384,8 @@ class SWECIDataset(BaseDataset):
 
     def _prepare_eval_input(self, episode: Episode) -> InputManifest:
         settings = get_settings()
-        logger = get_logger() 
 
         _, agent_image_tag = self._task_images[episode.task_id]
-        task_dir = Path(settings.dataset.cache_dir) / "processed" / episode.task_id 
         container_report = "/tmp/test_report.json"
 
         return InputManifest(params={

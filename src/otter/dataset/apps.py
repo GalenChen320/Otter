@@ -7,5 +7,5 @@ from otter.config.setting import get_settings
 class APPSDataset(BaseDataset):
 
     async def setup(self) -> None:
-        dataset = load_dataset("codeparrot/apps")
+        load_dataset("codeparrot/apps")
 
