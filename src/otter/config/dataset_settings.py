@@ -2,7 +2,7 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .utils import (
-    ROOT_DIR, tracked_field, untracked_field, coerce_empty_str
+    ROOT_DIR, tracked_field, untracked_field
     )
 
 
