@@ -72,12 +72,6 @@ def show_evalplus_summary():
 
     experiment_dir = Path("experiments") / exp_id
 
-    # 读取实验配置
-    config_path = experiment_dir / EXPERIMENT_META
-    config = None
-    if config_path.exists():
-        config = json.loads(config_path.read_text(encoding="utf-8"))
-
     episodes = _load_episodes(experiment_dir)
 
     # 按 sample_id 分组
