@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from otter.dataset.base import BaseDataset
-from otter.episode import Episode, InputManifest, OutputManifest, Turn, META_FILENAME
+from otter.episode import Episode, InputManifest, Turn, META_FILENAME
 
 
 class ConcreteDataset(BaseDataset):

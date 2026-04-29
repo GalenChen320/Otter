@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-import pytest
 
 from otter.episode import Episode, InputManifest, OutputManifest, Turn
 from otter.role import (
@@ -12,7 +11,6 @@ from otter.role import (
     pack_docker,
     EXTRACT_DISPATCH,
     PACK_DISPATCH,
-    BaseRole,
     ProposerRole,
     ExecutorRole,
     EvaluatorRole,

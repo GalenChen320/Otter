@@ -2,7 +2,6 @@
 
 import asyncio
 
-import pytest
 from pathlib import Path
 from dataclasses import dataclass
 

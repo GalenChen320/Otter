@@ -7,8 +7,8 @@ import pytest
 import docker
 import tarfile
 import subprocess
-from pathlib import Path, PurePosixPath
-from unittest.mock import MagicMock, patch, call
+from pathlib import PurePosixPath
+from unittest.mock import MagicMock
 
 import otter.backend.utils.sync_docker_utils as mod
 
@@ -142,8 +142,6 @@ class TestGetDockerStorageDevice:
     def test_falls_back_to_root_when_docker_root_missing(self, mocker):
         mocker.patch("otter.backend.utils.sync_docker_utils.platform.system", return_value="Linux")
         # docker info returns a non-existent path
-        call_count = [0]
-        original_exists = Path.exists
 
         def mock_check_output(cmd, **kwargs):
             if "docker" in cmd:

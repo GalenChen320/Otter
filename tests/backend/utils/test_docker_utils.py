@@ -9,7 +9,6 @@ Tests verify:
 
 import pytest
 import asyncio
-from unittest.mock import MagicMock, patch
 from subprocess import CompletedProcess
 
 from otter.backend.utils import docker_utils as mod

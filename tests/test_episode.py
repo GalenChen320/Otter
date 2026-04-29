@@ -3,11 +3,9 @@
 import json
 from pathlib import Path
 
-import pytest
 
 from otter.episode import (
     _is_path_field,
-    BaseManifest,
     InputManifest,
     OutputManifest,
     Turn,

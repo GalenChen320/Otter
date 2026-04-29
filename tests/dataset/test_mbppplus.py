@@ -1,10 +1,9 @@
 """Tests for otter.dataset.mbppplus module."""
 
 import pytest
-from pathlib import Path
 
 from otter.dataset.mbppplus import MBPPPlusDataset, MBPPPlusProblem
-from otter.episode import Episode, Turn, InputManifest, OutputManifest
+from otter.episode import Episode, Turn, OutputManifest
 
 
 class TestMBPPPlusProblem:

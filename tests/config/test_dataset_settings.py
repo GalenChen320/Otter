@@ -1,6 +1,5 @@
 """Tests for otter.config.dataset_settings module."""
 
-import pytest
 from pathlib import Path
 
 from otter.config.dataset_settings import (
