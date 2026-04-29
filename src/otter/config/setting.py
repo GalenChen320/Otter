@@ -3,8 +3,12 @@ from typing import Literal, Any
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from .backend_settings import *
-from .dataset_settings import *
+from .backend_settings import (
+    BackendSettings, BACKEND_SETTINGS_REGISTRY,
+)
+from .dataset_settings import (
+    DatasetSettings, DATASET_SETTINGS_REGISTRY,
+)
 from .utils import (
     ROOT_DIR, tracked_field, untracked_field, coerce_empty_str
     ) 
