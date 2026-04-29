@@ -65,7 +65,7 @@ def generate_nonpassed_dir(
             else:
                 f.write(json.dumps({
                     'test': node_id,
-                    'description': f"This test was not properly collected or executed in the current run, so no detailed traceback is available. However, it was recorded as 'passed' in the target report."
+                    'description': "This test was not properly collected or executed in the current run, so no detailed traceback is available. However, it was recorded as 'passed' in the target report."
                 }, ensure_ascii=False) + '\n')
     return len(nonpassed_ids)
 
